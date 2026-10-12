@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSR Banks</title>
+<meta name="description" content="Library and setlist manager for Yamaha PSR-E483 registration memory files.">
+<link rel="icon" href="icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #EEF0F4;
+    --surface: #FFFFFF;
+    --surface-2: #E4E7ED;
+    --text: #14161C;
+    --text-muted: #575B67;
+    --accent: #C2410C;
+    --accent-ink: #FFFFFF;
+    --border: #D7DAE2;
+    --mono-bg: #14161C;
+    --mono-text: #E7E4DC;
+    --mono-text-dim: #8B8E98;
+    --green: #4F8F6C;
+    --shadow: 0 30px 60px -25px rgba(20,22,28,0.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #131418;
+      --surface: #1B1D22;
+      --surface-2: #22242B;
+      --text: #EDEEF0;
+      --text-muted: #9A9DA9;
+      --accent: #FB923C;
+      --accent-ink: #14161C;
+      --border: #2B2E36;
+      --mono-bg: #0D0E11;
+      --mono-text: #DAD7CE;
+      --mono-text-dim: #75798A;
+      --green: #7CB697;
+      --shadow: 0 30px 70px -25px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #131418;
+    --surface: #1B1D22;
+    --surface-2: #22242B;
+    --text: #EDEEF0;
+    --text-muted: #9A9DA9;
+    --accent: #FB923C;
+    --accent-ink: #14161C;
+    --border: #2B2E36;
+    --mono-bg: #0D0E11;
+    --mono-text: #DAD7CE;
+    --mono-text-dim: #75798A;
+    --green: #7CB697;
+    --shadow: 0 30px 70px -25px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  html{ background:var(--bg); }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-left:max(20px, env(safe-area-inset-left, 0px));
+    padding-right:max(20px, env(safe-area-inset-right, 0px));
+  }
+  h1,h2,h3{
+    font-family:'IBM Plex Serif', Georgia, serif;
+    font-weight:600;
+    line-height:1.08;
+    text-wrap:balance;
+    margin:0;
+  }
+  p{ line-height:1.65; margin:0; }
+  code, .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; }
+  a{ color:inherit; }
+  img{ max-width:100%; display:block; }
+
+  .wrap{ max-width:1080px; margin:0 auto; }
+  .gutter{ padding-left:0; padding-right:0; }
+
+  /* ---------- nav ---------- */
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 0 0;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:17px; letter-spacing:-0.01em; }
+  .brand img{ width:26px; height:26px; border-radius:7px; }
+  .navlinks{ display:flex; align-items:center; gap:28px; font-size:14px; color:var(--text-muted); }
+  .navlinks a{ text-decoration:none; }
+  .navlinks a:hover{ color:var(--text); }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--accent); color:var(--accent-ink);
+    padding:10px 18px; border-radius:9px; font-weight:600; font-size:14px;
+    text-decoration:none; white-space:nowrap;
+  }
+  .btn.ghost{
+    background:transparent; color:var(--text); border:1px solid var(--border);
+  }
+
+  /* ---------- hero ---------- */
+  header.hero{ padding:76px 0 0; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--accent);
+    text-transform:uppercase; letter-spacing:0.10em; margin-bottom:18px; display:block;
+  }
+  h1.headline{ font-size:clamp(38px, 6vw, 66px); max-width:14ch; }
+  .sub{
+    font-size:19px; color:var(--text-muted); max-width:46ch; margin-top:20px;
+  }
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; margin-top:32px; align-items:center; }
+
+  .window{
+    margin-top:56px; border-radius:14px; overflow:hidden;
+    background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow);
+  }
+  .titlebar{
+    display:flex; align-items:center; gap:8px;
+    padding:12px 14px; background:var(--surface-2); border-bottom:1px solid var(--border);
+  }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.r{ background:#EE6A5F; } .dot.y{ background:#F5BD4F; } .dot.g{ background:#61C454; }
+  .titlebar .fname{
+    margin:0 auto; transform:translateX(-16px);
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--text-muted);
+  }
+  .window img{ display:block; width:100%; }
+
+  /* ---------- section shell ---------- */
+  section{ padding:120px 0; }
+  section.tight{ padding:80px 0; }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:0.10em; display:block; margin-bottom:14px;
+  }
+  h2.sectitle{ font-size:clamp(28px, 3.4vw, 40px); max-width:20ch; }
+  .lede{ font-size:17px; color:var(--text-muted); max-width:56ch; margin-top:16px; }
+
+  /* ---------- feature row (editorial alternating) ---------- */
+  .row{
+    display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center;
+    margin-top:64px;
+  }
+  .row.rev .copy{ order:2; }
+  .row.rev .shot{ order:1; }
+  .row .copy h3{ font-size:26px; }
+  .row .copy p{ color:var(--text-muted); margin-top:14px; font-size:15.5px; }
+  .row .shot{
+    border-radius:12px; overflow:hidden; border:1px solid var(--border);
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .row .shot img{ width:100%; display:block; }
+  .taglist{ margin-top:20px; display:flex; flex-direction:column; gap:9px; }
+  .tagitem{ display:flex; gap:10px; align-items:flex-start; font-size:14.5px; color:var(--text-muted); }
+  .tagitem .box{
+    flex:none; width:16px; height:16px; border-radius:4px; margin-top:2px;
+    background:var(--accent); color:var(--accent-ink);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  }
+
+  /* ---------- checklist feature grid ---------- */
+  .checklist{
+    margin-top:56px; border:1px solid var(--border); border-radius:14px;
+    background:var(--surface); overflow:hidden;
+  }
+  .checkrow{
+    display:grid; grid-template-columns:28px 1fr; gap:16px;
+    padding:22px 26px; border-bottom:1px solid var(--border);
+  }
+  .checkrow:last-child{ border-bottom:none; }
+  .check{
+    width:20px; height:20px; border-radius:5px; margin-top:2px;
+    background:var(--accent); display:flex; align-items:center; justify-content:center;
+  }
+  .check svg{ width:12px; height:12px; }
+  .checkrow h4{
+    margin:0 0 4px; font-size:16px; font-weight:600; font-family:'IBM Plex Sans',sans-serif;
+  }
+  .checkrow p{ color:var(--text-muted); font-size:14.5px; }
+
+  /* ---------- markdown proof section ---------- */
+  .proof{
+    margin-top:56px; display:grid; grid-template-columns:1.1fr 1fr; gap:0;
+    border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);
+  }
+  .proof .code{
+    background:var(--mono-bg); color:var(--mono-text); padding:28px 26px;
+    font-family:'IBM Plex Mono', monospace; font-size:13px; line-height:1.85;
+    white-space:pre; overflow-x:auto;
+  }
+  .proof .code .h{ color:#8AA9FF; }
+  .proof .code .x{ color:var(--green); }
+  .proof .code .n{ color:var(--mono-text-dim); font-style:italic; }
+  .proof .shotwrap{ background:var(--surface); }
+  .proof .shotwrap img{ width:100%; height:100%; object-fit:cover; }
+
+  /* ---------- install ---------- */
+  .install-card{
+    margin-top:56px; border-radius:16px; background:var(--mono-bg); color:var(--mono-text);
+    padding:40px; box-shadow:var(--shadow);
+  }
+  .install-card .line{
+    font-family:'IBM Plex Mono', monospace; font-size:14.5px; padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:12px;
+  }
+  .install-card .line:last-child{ border-bottom:none; }
+  .install-card .prompt{ color:var(--mono-text-dim); }
+  .install-card .cmt{ color:var(--mono-text-dim); }
+
+  /* ---------- footer ---------- */
+  footer{ padding:60px 0 90px; border-top:1px solid var(--border); }
+  .footrow{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+  footer .fbrand{ display:flex; align-items:center; gap:10px; font-weight:600; }
+  footer .fbrand img{ width:22px; height:22px; border-radius:6px; }
+  footer .flinks{ display:flex; gap:24px; font-size:14px; color:var(--text-muted); }
+  footer .flinks a{ text-decoration:none; }
+  footer .flinks a:hover{ color:var(--text); }
+  .fnote{ margin-top:28px; font-size:13px; color:var(--text-muted); max-width:60ch; }
+
+  @media (max-width:760px){
+    .row{ grid-template-columns:1fr; gap:28px; }
+    .row.rev .copy{ order:1; } .row.rev .shot{ order:2; }
+    .proof{ grid-template-columns:1fr; }
+    .navlinks{ display:none; }
+    section{ padding:76px 0; }
+    header.hero{ padding:48px 0 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><img src="icon.png" alt=""> PSR Banks</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#format">Plain files</a><a href="#install">Install</a></div>
+    <a class="btn ghost" href="https://github.com/sergiorivas/psr-banks">GitHub ↗</a>
+  </nav>
+  <header class="hero">
+    <span class="eyebrow">for macOS · Yamaha PSR-E483</span>
+    <h1 class="headline">Your registration memories, organized.</h1>
+    <p class="sub">Keep every patch you've ever made in one library, assemble setlists of 8 banks × 4 memories, and export a valid <code>USER00x.USR</code> file for your keyboard.</p>
+    <div class="hero-actions"><a class="btn" href="#install">Get PSR Banks — it's free</a></div>
+  </header>
+  <section id="how">
+    <span class="kicker">How it works</span>
+    <h2 class="sectitle">Import once, reuse everywhere.</h2>
+    <p class="lede">The keyboard stores 32 registration memories per file. PSR Banks splits them into individual patches so you can mix and match across songs and gigs.</p>
+    <div class="row">
+      <div class="copy"><h3>A library of patches</h3>
+        <p>Import any <code>.USR</code> file and every memory becomes a patch you can name, tag, give an instrument icon and inspect.</p>
+        <div class="taglist">
+          <div class="tagitem"><span class="box">✓</span> Tags, 23 instrument icons, patch info sheet</div>
+          <div class="tagitem"><span class="box">✓</span> Finder-style rename</div>
+          <div class="tagitem"><span class="box">✓</span> Resilient to damaged or half-deleted libraries</div></div></div>
+      <div class="copy"><h3>Setlists of 8 × 4</h3>
+        <p>Drag patches from the library into bank slots. Copy, cut and paste between slots, and fill the gaps with a default patch.</p>
+        <div class="taglist">
+          <div class="tagitem"><span class="box">✓</span> Drag and drop from the library</div>
+          <div class="tagitem"><span class="box">✓</span> ⌘C ⌘X ⌘V, and a cheat sheet on ⌘/</div>
+          <div class="tagitem"><span class="box">✓</span> Default patch: ⇧⌘D, ⇧⌘U, ⇧⌘F</div></div></div>
+    </div>
+  </section>
+  <section id="format" class="tight">
+    <span class="kicker">Nothing lost in translation</span>
+    <h2 class="sectitle">Byte-identical round trips.</h2>
+    <p class="lede">Importing a file and exporting it again gives back exactly the same bytes, checksum included. The test suite proves it against real files from a PSR-E483; two are in the repo under <code>Examples/</code>.</p>
+  </section>
+  <section id="install" class="tight">
+    <span class="kicker">Install</span>
+    <h2 class="sectitle">Via Homebrew.</h2>
+    <p class="lede">PSR Banks ships as an ad-hoc signed build through a Homebrew cask. Requires macOS 14 or later.</p>
+    <div class="install-card">
+      <div class="line"><span class="prompt">$</span> brew tap sergiorivas/tap</div>
+      <div class="line"><span class="prompt">$</span> brew install --cask psr-banks</div>
+    </div>
+  </section>
+  <footer>
+    <div class="footrow">
+      <div class="fbrand"><img src="icon.png" alt=""> PSR Banks</div>
+      <div class="flinks"><a href="https://github.com/sergiorivas/psr-banks">GitHub</a><a href="https://github.com/sergiorivas/psr-banks#readme">Documentation</a><a href="https://github.com/sergiorivas/psr-banks/releases">Releases</a></div>
+    </div>
+    <p class="fnote">PSR Banks is a small, independent app and is not affiliated with Yamaha. Not notarized by Apple — if macOS refuses to open it, run <code>xattr -cr "/Applications/PSR Banks.app"</code>.</p>
+  </footer>
+</div>
+</body>
+</html>

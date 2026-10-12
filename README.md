@@ -9,6 +9,8 @@ macOS app to keep a library of PSR-E483 registration patches and assemble/export
 The build is ad-hoc signed (not notarized); the cask strips the quarantine flag. If macOS still refuses to open it:
 `xattr -cr "/Applications/PSR Banks.app"`.
 
+Example `.USR` files from a PSR-E483 are in `Examples/` (used by the tests). Landing page: https://sergiorivas.github.io/psr-banks/
+
 ## Develop
 
     swift test               # core logic, incl. byte-identical import → export of the example files

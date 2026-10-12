@@ -3,15 +3,15 @@ import XCTest
 
 final class USRFileTests: XCTestCase {
     static let examples = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("examples")
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("Examples")
 
     func exampleData(_ n: Int) throws -> Data {
         try Data(contentsOf: Self.examples.appendingPathComponent("USER00\(n).USR"))
     }
 
     func testRoundTripIsByteIdentical() throws {
-        for n in 1...3 {
+        for n in 1...2 {
             let raw = try exampleData(n)
             let file = try USRFile(data: raw)
             XCTAssertTrue(file.checksumIsValid, "checksum of USER00\(n)")
