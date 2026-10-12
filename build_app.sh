@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 swift build -c release
 BIN="$(swift build -c release --show-bin-path)"
 APP="PSR Banks.app"
-VERSION="$(tr -d '[:space:]' < VERSION)"
+VERSION="${PSRBANKS_VERSION:-$(Scripts/version.sh)}"
 BUILD="$(date +%Y%m%d%H%M)"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

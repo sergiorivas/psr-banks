@@ -28,5 +28,7 @@ Library folder defaults to `~/Documents/PSR Banks Library` (change it from the "
 
 ## Release
 
-Bump `VERSION` and `CHANGELOG.md`, commit, then run `Scripts/publish_cask.sh`. It runs the tests, builds and zips the
+Commit, then run `Scripts/publish_cask.sh [version]`. The version defaults to the next patch after the latest `vX.Y.Z`
+tag (`Scripts/version.sh`); pass one to override it, and add a matching `## X.Y.Z` section to `CHANGELOG.md` for the
+release notes. It runs the tests, builds and zips the
 app, tags `vX.Y.Z`, creates the GitHub release and updates the cask in the `homebrew-tap` repo.

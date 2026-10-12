@@ -7,17 +7,20 @@
 # No Developer ID / notarization: the cask's postflight strips the Gatekeeper
 # quarantine flag with `xattr -cr`.
 #
-# Bump VERSION (and CHANGELOG.md) and commit before running. Env vars:
+# Versioning is hands-off (same as Listo): Scripts/version.sh takes the next patch
+# after the latest vX.Y.Z tag, and this script creates + pushes that tag. Pass a
+# version to override it (e.g. for a minor bump). Add a "## X.Y.Z" section to
+# CHANGELOG.md first if you want it used as the release notes. Env vars:
 #   PSRBANKS_GITHUB_REPO  default: sergiorivas/psr-banks
 #   PSRBANKS_TAP_DIR      local checkout of the tap (default: ../../../homebrew-tap,
 #                         i.e. ~/PARA/projects/homebrew-tap)
 #
-# Usage: Scripts/publish_cask.sh
+# Usage: Scripts/publish_cask.sh [version]
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+VERSION="${1:-$("$ROOT_DIR/Scripts/version.sh")}"
 GITHUB_REPO="${PSRBANKS_GITHUB_REPO:-sergiorivas/psr-banks}"
 TAP_DIR="${PSRBANKS_TAP_DIR:-$ROOT_DIR/../../homebrew-tap}"
 CASK_PATH="$TAP_DIR/Casks/psr-banks.rb"
@@ -38,7 +41,7 @@ else
 fi
 
 echo "==> 2/5 Building and packaging ($VERSION)"
-"$ROOT_DIR/build_app.sh"
+PSRBANKS_VERSION="$VERSION" "$ROOT_DIR/build_app.sh"
 mkdir -p "$DIST_DIR"
 rm -f "$ZIP_PATH"
 STAGE_DIR="$DIST_DIR/stage"
