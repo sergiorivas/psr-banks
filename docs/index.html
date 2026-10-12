@@ -155,6 +155,8 @@
     background:var(--surface); box-shadow:var(--shadow);
   }
   .row .shot img{ width:100%; display:block; }
+  .row .shot.menu{ padding:28px; display:flex; justify-content:center; background:var(--surface-2); }
+  .row .shot.menu img{ width:auto; max-width:285px; border-radius:10px; box-shadow:var(--shadow); }
   .taglist{ margin-top:20px; display:flex; flex-direction:column; gap:9px; }
   .tagitem{ display:flex; gap:10px; align-items:flex-start; font-size:14.5px; color:var(--text-muted); }
   .tagitem .box{
@@ -268,6 +270,19 @@
           <div class="tagitem"><span class="box">✓</span> ⌘C ⌘X ⌘V, and a cheat sheet on ⌘/</div>
           <div class="tagitem"><span class="box">✓</span> Default patch: ⇧⌘D, ⇧⌘U, ⇧⌘F</div></div></div>
       <div class="shot"><img src="screenshots/setlist.png" alt="A setlist with all 32 slots filled."></div>
+    </div>
+    <div class="row">
+      <div class="copy"><h3>Every byte, inspected</h3>
+        <p>Open the info sheet for any patch to see its main, split and dual voices with octave, volume, pan, reverb, chorus and envelope settings, plus where it came from and which setlists use it.</p>
+        <div class="taglist">
+          <div class="tagitem"><span class="box">✓</span> Space bar opens it on the selected slot</div>
+          <div class="tagitem"><span class="box">✓</span> Identity checksum and import source</div></div></div>
+      <div class="shot"><img src="screenshots/patch-info.png" alt="The patch info sheet showing main, split and dual voice settings."></div>
+    </div>
+    <div class="row rev">
+      <div class="copy"><h3>A right-click away</h3>
+        <p>Right-click a slot to paste, copy, set the default patch, show info, rename, change the icon, edit tags or clear it.</p></div>
+      <div class="shot menu"><img src="screenshots/context-menu.png" alt="The slot context menu: paste, use default patch, copy, set as default, show info, rename, icon, tags, clear slot."></div>
     </div>
   </section>
   <section id="format" class="tight">

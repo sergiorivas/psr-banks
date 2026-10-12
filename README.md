@@ -10,6 +10,12 @@ macOS app to keep a library of PSR-E483 registration patches and assemble/export
   the app only, not written to the exported `.USR`.
 - Export a valid `USER00x.USR` file for the keyboard.
 
+![PSR Banks setlist editor](docs/screenshots/setlist.png)
+
+| Patch info | Slot menu |
+| --- | --- |
+| ![Patch info sheet](docs/screenshots/patch-info.png) | ![Slot context menu](docs/screenshots/context-menu.png) |
+
 ## Install
 
     brew install --cask sergiorivas/tap/psr-banks
