@@ -1,6 +1,6 @@
 # Changelog
 
-Versions come from git tags (`Scripts/version.sh`). `./build_app.sh` writes it into the app's Info.plist; the sidebar footer and
+Versions come from git tags (`Scripts/version.sh`). `Scripts/build_app.sh` writes it into the app's Info.plist; the sidebar footer and
 *PSR Banks ▸ About* show it. The library folder records its format version and the last app version that opened it
 (`library.json`).
 

@@ -22,7 +22,7 @@ Example `.USR` files from a PSR-E483 are in `Examples/` (used by the tests). Lan
 ## Develop
 
     swift test               # core logic, incl. byte-identical import → export of the example files
-    ./build_app.sh --open    # builds "PSR Banks.app" and launches it
+    Scripts/build_app.sh --open    # builds "PSR Banks.app" and launches it
 
 Library folder defaults to `~/Documents/PSR Banks Library` (change it from the "…" menu in the sidebar).
 

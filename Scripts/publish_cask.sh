@@ -41,7 +41,7 @@ else
 fi
 
 echo "==> 2/5 Building and packaging ($VERSION)"
-PSRBANKS_VERSION="$VERSION" "$ROOT_DIR/build_app.sh"
+PSRBANKS_VERSION="$VERSION" "$ROOT_DIR/Scripts/build_app.sh"
 mkdir -p "$DIST_DIR"
 rm -f "$ZIP_PATH"
 STAGE_DIR="$DIST_DIR/stage"

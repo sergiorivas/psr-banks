@@ -1,7 +1,7 @@
 #!/bin/zsh
-# Builds PSR Banks.app next to this script. Usage: ./build_app.sh [--open]
+# Builds PSR Banks.app in the repo root. Usage: Scripts/build_app.sh [--open]
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 swift build -c release
 BIN="$(swift build -c release --show-bin-path)"
 APP="PSR Banks.app"
