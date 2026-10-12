@@ -137,21 +137,25 @@ struct SlotGrid: View {
     let editTags: (Patch) -> Void
     @State private var targeted: Int?
     @State private var keyMonitor: Any?
+    private let bankLabelWidth: CGFloat = 120
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Color.clear.frame(width: 64, height: 1)
+                Color.clear.frame(width: bankLabelWidth, height: 1)
                 ForEach(1...SlotLayout.memories, id: \.self) { m in
                     Text("Memory \(m)").font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                 }
             }
             ForEach(1...SlotLayout.banks, id: \.self) { bank in
                 HStack(spacing: 8) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Theme.bankHues[bank - 1]).frame(width: 8, height: 8)
-                        Text("Bank \(bank)").font(.system(size: 12, weight: .semibold, design: .rounded))
-                    }.frame(width: 64, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Theme.bankHues[bank - 1]).frame(width: 8, height: 8)
+                            Text("Bank \(bank)").font(.system(size: 12, weight: .semibold, design: .rounded))
+                        }
+                        BankDescriptionField(setlistID: setlist.id, bank: bank, text: setlist.bankDescriptions[bank - 1])
+                    }.frame(width: bankLabelWidth, alignment: .leading)
                     ForEach(1...SlotLayout.memories, id: \.self) { memory in
                         let pos = SlotLayout.position(bank: bank, memory: memory)
                         let patch = store.patch(setlist.slots[pos])
@@ -265,6 +269,35 @@ struct SlotGrid: View {
             state.infoPatchID = p.id; return true
         default: return false
         }
+    }
+}
+
+/// Short editable phrase describing a bank ("Salsa", "Song SBC"). Saved on Return or when focus leaves.
+struct BankDescriptionField: View {
+    @EnvironmentObject var store: LibraryStore
+    let setlistID: UUID
+    let bank: Int
+    let text: String
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextField("Add description", text: $draft)
+            .textFieldStyle(.plain)
+            .font(.system(size: 11)).foregroundStyle(.secondary)
+            .lineLimit(1)
+            .focused($focused)
+            .onAppear { draft = text }
+            .onChange(of: text) { _, t in if !focused { draft = t } }
+            .onSubmit { commit() }
+            .onExitCommand { draft = text; focused = false }
+            .onChange(of: focused) { _, f in if !f { commit() } }
+            .help("Describe what Bank \(bank) is for")
+    }
+
+    private func commit() {
+        store.setBankDescription(draft, bank: bank, in: setlistID)
+        draft = draft.trimmingCharacters(in: .whitespaces)
     }
 }
 

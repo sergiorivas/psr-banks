@@ -52,6 +52,8 @@ public struct SetlistMeta: Codable, Identifiable, Hashable {
     /// The first 464 bytes of the `.USR` file this setlist is exported into.
     public var header: Data
     public var tags: [String] = []
+    /// Short phrase per bank (8 entries, bank 1 first), e.g. "Salsa". Empty string = none.
+    public var bankDescriptions: [String] = Array(repeating: "", count: SlotLayout.banks)
 
     public var filledCount: Int { slots.compactMap { $0 }.count }
     public var isComplete: Bool { filledCount == USRFile.patchCount }
@@ -66,6 +68,8 @@ extension SetlistMeta {
         slots = try c.decode([UUID?].self, forKey: .slots)
         header = try c.decode(Data.self, forKey: .header)
         tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
+        let d = try c.decodeIfPresent([String].self, forKey: .bankDescriptions) ?? []
+        bankDescriptions = Array((d + Array(repeating: "", count: SlotLayout.banks)).prefix(SlotLayout.banks))
     }
 }
 

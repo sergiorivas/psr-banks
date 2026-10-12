@@ -4,6 +4,9 @@ Versions live in `VERSION` (one line). `./build_app.sh` writes it into the app's
 *PSR Banks ▸ About* show it. The library folder records its format version and the last app version that opened it
 (`library.json`).
 
+## Unreleased
+- Bank descriptions: a short editable phrase per bank in each setlist (e.g. “Salsa”, “Song SBC”), shown under the bank name.
+
 ## 0.3.0
 - Copy / cut / paste patches between slots (⌘C ⌘X ⌘V).
 - Default patch: mark one (⇧⌘D), put it into the selected slot (⇧⌘U), fill empty slots with it (⇧⌘F).

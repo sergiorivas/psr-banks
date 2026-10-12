@@ -243,10 +243,11 @@ public final class LibraryStore: ObservableObject {
     // MARK: Setlists
 
     @discardableResult
-    public func createSetlist(name: String, slots: [UUID?]? = nil, header: Data? = nil, tags: [String] = []) -> SetlistMeta {
-        let s = SetlistMeta(id: UUID(), name: name, createdAt: Date(),
+    public func createSetlist(name: String, slots: [UUID?]? = nil, header: Data? = nil, tags: [String] = [], bankDescriptions: [String]? = nil) -> SetlistMeta {
+        var s = SetlistMeta(id: UUID(), name: name, createdAt: Date(),
                             slots: slots ?? Array(repeating: nil, count: USRFile.patchCount),
                             header: header ?? USRFile.defaultHeader, tags: tags)
+        if let bankDescriptions { s.bankDescriptions = Array((bankDescriptions + Array(repeating: "", count: SlotLayout.banks)).prefix(SlotLayout.banks)) }
         write(s)
         setlists.append(s)
         sortSetlists()
@@ -284,6 +285,15 @@ public final class LibraryStore: ObservableObject {
         updateSetlist(s)
     }
 
+    /// `bank` is 1-based.
+    public func setBankDescription(_ text: String, bank: Int, in setlistID: UUID) {
+        guard var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return }
+        let t = text.trimmingCharacters(in: .whitespaces)
+        guard s.bankDescriptions[bank - 1] != t else { return }
+        s.bankDescriptions[bank - 1] = t
+        updateSetlist(s)
+    }
+
     public func renameSetlist(_ id: UUID, to name: String) {
         guard var s = setlist(id) else { return }
         s.name = name
@@ -293,7 +303,7 @@ public final class LibraryStore: ObservableObject {
 
     public func duplicateSetlist(_ id: UUID) {
         guard let s = setlist(id) else { return }
-        createSetlist(name: s.name + " copy", slots: s.slots, header: s.header, tags: s.tags)
+        createSetlist(name: s.name + " copy", slots: s.slots, header: s.header, tags: s.tags, bankDescriptions: s.bankDescriptions)
     }
 
     public func deleteSetlist(_ id: UUID) {
