@@ -80,7 +80,7 @@ cask "psr-banks" do
   desc "Library and setlist manager for Yamaha PSR-E483 registration memory files"
   homepage "https://github.com/$GITHUB_REPO"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "PSR Banks.app"
 
