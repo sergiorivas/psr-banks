@@ -31,4 +31,4 @@ PL
 sed -i '' "s/__VERSION__/$VERSION/; s/__BUILD__/$BUILD/" "$APP/Contents/Info.plist"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || true
 echo "Built: $PWD/$APP  (version $VERSION, build $BUILD)"
-[[ "${1:-}" == "--open" ]] && open "$APP"
+if [[ "${1:-}" == "--open" ]]; then open "$APP"; fi
