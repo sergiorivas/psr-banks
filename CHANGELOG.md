@@ -5,7 +5,8 @@ Versions come from git tags (`Scripts/version.sh`). `Scripts/build_app.sh` write
 (`library.json`).
 
 ## 0.4.0
-- Bank descriptions: a short editable phrase per bank in each setlist (e.g. “Salsa”, “Song SBC”), shown under the bank name.
+- Bank descriptions: a short editable phrase per bank in each setlist (e.g. “Salsa”, “Song SBC”), shown under the bank name. The label is remembered by the bank's content, so importing the same bank again
+  (even after deleting the setlist) restores it.
 
 ## 0.3.0
 - Copy / cut / paste patches between slots (⌘C ⌘X ⌘V).

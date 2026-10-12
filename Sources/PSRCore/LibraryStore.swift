@@ -285,13 +285,36 @@ public final class LibraryStore: ObservableObject {
         updateSetlist(s)
     }
 
-    /// `bank` is 1-based.
+    /// `bank` is 1-based. The label is also remembered for the bank's content, so loading the same bank again restores it.
     public func setBankDescription(_ text: String, bank: Int, in setlistID: UUID) {
         guard var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return }
         let t = text.trimmingCharacters(in: .whitespaces)
         guard s.bankDescriptions[bank - 1] != t else { return }
         s.bankDescriptions[bank - 1] = t
         updateSetlist(s)
+        if let key = bankKey(s, bank: bank) {
+            var labels = info.bankLabels ?? [:]
+            labels[key] = t.isEmpty ? nil : t
+            info.bankLabels = labels.isEmpty ? nil : labels
+            saveInfo()
+        }
+    }
+
+    /// Identifies a bank by the content of its 4 memories (patch hashes, memory 1 first); nil if any slot has no patch.
+    func bankKey(_ s: SetlistMeta, bank: Int) -> String? {
+        let hashes = (1...SlotLayout.memories).compactMap { m in patch(s.slots[SlotLayout.position(bank: bank, memory: m)])?.meta.hash }
+        return hashes.count == SlotLayout.memories ? hashes.joined(separator: ",") : nil
+    }
+
+    /// The remembered label for a bank with this content: the stored one, else any existing setlist's bank that has it.
+    func rememberedLabel(forKey key: String) -> String? {
+        if let l = info.bankLabels?[key], !l.isEmpty { return l }
+        for s in setlists {
+            for bank in 1...SlotLayout.banks where !s.bankDescriptions[bank - 1].isEmpty && bankKey(s, bank: bank) == key {
+                return s.bankDescriptions[bank - 1]
+            }
+        }
+        return nil
     }
 
     public func renameSetlist(_ id: UUID, to name: String) {
@@ -339,7 +362,16 @@ public final class LibraryStore: ObservableObject {
         }
         guard let setlistName else { return nil }
         let slots: [UUID?] = plan.slots.map { byHash[$0.hash] }
-        return createSetlist(name: setlistName, slots: slots, header: plan.file.header)
+        var created = createSetlist(name: setlistName, slots: slots, header: plan.file.header)
+        // A bank that was labelled before (same 4 patches) gets its label back.
+        var labelled = false
+        for bank in 1...SlotLayout.banks {
+            if let key = bankKey(created, bank: bank), let label = rememberedLabel(forKey: key) {
+                created.bankDescriptions[bank - 1] = label; labelled = true
+            }
+        }
+        if labelled { updateSetlist(created) }
+        return created
     }
 
     public func buildFile(for setlistID: UUID) throws -> USRFile {

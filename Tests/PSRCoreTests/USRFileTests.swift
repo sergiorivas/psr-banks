@@ -89,6 +89,28 @@ final class LibraryFeatureTests: XCTestCase {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
         return (LibraryStore(root: tmp), tmp)
     }
+    func testBankLabelIsRestoredWhenSameBankIsImportedAgain() throws {
+        let (store, tmp) = makeStore()
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let plan = try store.makeImportPlan(from: usr2)
+        let names = Dictionary(uniqueKeysWithValues: plan.newSlots.map { ($0.position, $0.info.suggestedName) })
+        let first = try XCTUnwrap(store.commit(plan, names: names, setlistName: "First"))
+        XCTAssertEqual(first.bankDescriptions, Array(repeating: "", count: 8))
+        store.setBankDescription("Salsa", bank: 2, in: first.id)
+
+        // Even after the labelled setlist is gone, importing the same bank brings the label back.
+        store.deleteSetlist(first.id)
+        let second = try XCTUnwrap(store.commit(try store.makeImportPlan(from: usr2), names: [:], setlistName: "Second"))
+        XCTAssertEqual(second.bankDescriptions[1], "Salsa")
+        XCTAssertEqual(second.bankDescriptions.filter { !$0.isEmpty }.count, 1)
+        XCTAssertEqual(LibraryStore(root: tmp).setlist(second.id)?.bankDescriptions[1], "Salsa")
+
+        // Clearing the label forgets it.
+        store.setBankDescription("", bank: 2, in: second.id)
+        let third = try XCTUnwrap(store.commit(try store.makeImportPlan(from: usr2), names: [:], setlistName: "Third"))
+        XCTAssertEqual(third.bankDescriptions[1], "")
+    }
+
     var usr2: URL { USRFileTests.examples.appendingPathComponent("USER002.USR") }
 
     func testRenameDoesNotAffectDuplicateDetection() throws {

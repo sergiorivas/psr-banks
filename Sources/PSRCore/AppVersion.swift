@@ -15,4 +15,6 @@ struct LibraryInfo: Codable, Equatable {
     var formatVersion: Int = AppVersion.libraryFormat
     var appVersion: String?
     var defaultPatchID: UUID?
+    /// Bank descriptions remembered by content (see `LibraryStore.bankKey`), so a re-imported bank gets its label back.
+    var bankLabels: [String: String]?
 }
