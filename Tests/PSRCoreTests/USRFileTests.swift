@@ -210,7 +210,7 @@ final class LibraryResilienceTests: XCTestCase {
         XCTAssertThrowsError(try reloaded.buildFile(for: s.id))
     }
 
-    func testBlankPatchBecomesDefaultAndClearBankEmptiesFourSlots() throws {
+    func testBlankPatchBecomesDefaultAndResetBankFillsFourSlots() throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: tmp) }
         let store = LibraryStore(root: tmp)
@@ -222,12 +222,12 @@ final class LibraryResilienceTests: XCTestCase {
         XCTAssertEqual(LibraryStore(root: tmp).defaultPatchID, blank.id)
 
         let s = store.createSetlist(name: "S", slots: Array(repeating: a.id, count: 32))
-        store.setBankDescription("Salsa", bank: 2, in: s.id)
-        store.clearBank(2, in: s.id)
+        XCTAssertTrue(store.resetBankToDefault(2, in: s.id))
         let after = try XCTUnwrap(store.setlist(s.id))
-        XCTAssertEqual(after.slots.compactMap { $0 }.count, 28)
-        XCTAssertEqual((1...4).map { after.slots[SlotLayout.position(bank: 2, memory: $0)] }.compactMap { $0 }.count, 0)
-        XCTAssertEqual(after.bankDescriptions[1], "")
+        XCTAssertEqual((1...4).map { after.slots[SlotLayout.position(bank: 2, memory: $0)] }, Array(repeating: blank.id, count: 4))
+        XCTAssertEqual(after.slots.filter { $0 == blank.id }.count, 4)
+        store.setDefaultPatch(nil)
+        XCTAssertFalse(store.resetBankToDefault(3, in: s.id))
         XCTAssertTrue(store.patchFolderURL(a.id).path.hasSuffix("\(a.id.uuidString).patch"))
     }
 

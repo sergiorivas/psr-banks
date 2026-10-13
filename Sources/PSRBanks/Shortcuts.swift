@@ -46,7 +46,8 @@ struct ShortcutsSheet: View {
         ("Patch list", [("↑ ↓", "Move the selection")]),
         ("Setlist grid (click a slot first)", [("← →", "Previous / next memory"), ("↑ ↓", "Previous / next bank"), ("⌫", "Put the default patch in the slot (asks first if no default is set)"), ("Return", "Rename the patch"), ("Space", "Show the patch info"),
                      ("Double-click a patch", "Put it in the selected slot and move on")]),
-        ("Setlist grid (click a bank name first)", [("↑ ↓", "Previous / next bank"), ("→", "Go to the bank's first memory"), ("⌫", "Delete the bank (asks first)"), ("Space", "Show the bank info")]),
+        ("Setlist grid (click a bank name first)", [("↑ ↓", "Previous / next bank"), ("→", "Go to the bank's first memory"), ("⌫", "Delete the bank: puts the default patch in its 4 memories (asks first)")]),
+        ("Setlist list (sidebar)", [("⌫", "Delete the selected setlist (asks first)"), ("Return", "Rename it")]),
         ("Windows", [("⌘/", "This list (the app version is at the bottom of the sidebar)"), ("⌘W", "Close window"), ("⌘Q", "Quit")]),
     ]
 

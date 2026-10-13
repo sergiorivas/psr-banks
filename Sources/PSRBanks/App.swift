@@ -4,7 +4,6 @@ import PSRCore
 @MainActor
 final class AppState: ObservableObject {
     enum Selection: Hashable { case patches; case setlist(UUID) }
-    struct BankRef: Identifiable { let setlistID: UUID; let bank: Int; var id: String { "\(setlistID)-\(bank)" } }
     struct PendingImport: Identifiable { let id = UUID(); let plan: ImportPlan }
 
     @Published var selection: Selection? = .patches { didSet { if selection != oldValue { selectionChangedAt = Date() } } }
@@ -24,7 +23,7 @@ final class AppState: ObservableObject {
     var patchSelectionChangedAt = Date.distantPast
     /// Bank (1-based) highlighted in the open setlist; exclusive with `selectedSlot`.
     @Published var selectedBank: Int?
-    @Published var infoBank: BankRef?
+    @Published var infoSetlistID: UUID?
     @Published var renaming: RenameTarget?
     @Published var taggingPatchID: UUID?
     @Published var showShortcuts = false

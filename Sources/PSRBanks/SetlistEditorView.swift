@@ -53,10 +53,9 @@ struct SetlistEditorView: View {
             Spacer()
             Menu {
                 Button("Duplicate") { store.duplicateSetlist(s.id) }
-                Button("Delete", role: .destructive) {
-                    state.selection = .patches
-                    store.deleteSetlist(s.id)
-                }
+                Button("Show Info") { state.infoSetlistID = s.id }
+                Divider()
+                Button("Delete…", role: .destructive) { SetlistActions.confirmDelete(s, store: store, state: state) }
             } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
             Button { export(s) } label: { Label("Export USR…", systemImage: "square.and.arrow.up") }
@@ -158,8 +157,6 @@ struct SlotGrid: View {
                         .contentShape(Rectangle())
                         .onTapGesture { grabKeyboard(); state.selectedBank = bank; selected = nil }
                         .contextMenu {
-                            Button("Show Info") { state.infoBank = .init(setlistID: setlist.id, bank: bank) }
-                            Divider()
                             Button("Delete Bank…", role: .destructive) { confirmDeleteBank(bank) }
                         }
                         BankDescriptionField(setlistID: setlist.id, bank: bank, text: setlist.bankDescriptions[bank - 1])
@@ -232,17 +229,25 @@ struct SlotGrid: View {
         if a.runModal() == .alertSecondButtonReturn { store.setSlot(pos, of: setlist.id, to: nil) }
     }
 
+    /// Deleting a bank puts the default patch in all 4 memories; asks first, and explains when there is no default.
     private func confirmDeleteBank(_ bank: Int) {
-        let names = (1...SlotLayout.memories).compactMap { store.patch(setlist.slots[SlotLayout.position(bank: bank, memory: $0)])?.name }
         let a = NSAlert()
         a.alertStyle = .warning
+        guard let d = store.defaultPatch else {
+            a.messageText = "No default patch is set"
+            a.informativeText = "Deleting a bank puts the default patch in its 4 memories, but none is marked. Mark one with Patch ▸ Set as Default Patch (⇧⌘D), "
+                + "or name a patch “\(LibraryStore.blankPatchName)” and it becomes the default automatically."
+            a.addButton(withTitle: "OK")
+            a.runModal(); return
+        }
+        let names = (1...SlotLayout.memories).compactMap { store.patch(setlist.slots[SlotLayout.position(bank: bank, memory: $0)])?.name }
         a.messageText = "Delete Bank \(bank)?"
-        a.informativeText = "All 4 memories of Bank \(bank) in “\(setlist.name)” will be emptied and its description removed."
-            + (names.isEmpty ? "" : "\n\n" + names.joined(separator: "\n")) + "\n\nThe patches stay in your library. The setlist cannot be exported until the bank is filled again."
+        a.informativeText = "The 4 memories of Bank \(bank) in “\(setlist.name)” will be replaced by the default patch “\(d.name)”."
+            + (names.isEmpty ? "" : "\n\nCurrently:\n" + names.joined(separator: "\n")) + "\n\nThe patches stay in your library."
         a.addButton(withTitle: "Cancel")
         let b = a.addButton(withTitle: "Delete Bank")
         b.hasDestructiveAction = true
-        if a.runModal() == .alertSecondButtonReturn { store.clearBank(bank, in: setlist.id) }
+        if a.runModal() == .alertSecondButtonReturn { store.resetBankToDefault(bank, in: setlist.id) }
     }
 
     /// Takes keyboard focus away from the sidebar / lists so the arrow keys drive the grid.
@@ -279,7 +284,6 @@ struct SlotGrid: View {
             case 124:                                                                      // right: into the bank's first memory
                 state.selectedBank = nil; selected = SlotLayout.position(bank: bank, memory: 1); return true
             case 51, 117: confirmDeleteBank(bank); return true
-            case 49: state.infoBank = .init(setlistID: id, bank: bank); return true
             default: return false
             }
         }

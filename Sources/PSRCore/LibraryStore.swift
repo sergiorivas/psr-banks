@@ -303,12 +303,13 @@ public final class LibraryStore: ObservableObject {
         updateSetlist(s)
     }
 
-    /// Empties the 4 memories of a bank (1-based) and drops its description. The patches stay in the library.
-    public func clearBank(_ bank: Int, in setlistID: UUID) {
-        guard var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return }
-        for m in 1...SlotLayout.memories { s.slots[SlotLayout.position(bank: bank, memory: m)] = nil }
-        s.bankDescriptions[bank - 1] = ""
+    /// Puts the default patch into the 4 memories of a bank (1-based). Returns false when there is no default patch.
+    @discardableResult
+    public func resetBankToDefault(_ bank: Int, in setlistID: UUID) -> Bool {
+        guard let d = defaultPatch, var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return false }
+        for m in 1...SlotLayout.memories { s.slots[SlotLayout.position(bank: bank, memory: m)] = d.id }
         updateSetlist(s)
+        return true
     }
 
     /// `bank` is 1-based. The label is also remembered for the bank's content, so loading the same bank again restores it.

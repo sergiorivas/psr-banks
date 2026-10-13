@@ -59,9 +59,11 @@ struct ContentView: View {
                     .preferredColorScheme(AppearanceChoice(rawValue: appearance)?.scheme)
             }
         }
-        .sheet(item: $state.infoBank) { ref in
-            BankInfoSheet(setlistID: ref.setlistID, bank: ref.bank).environmentObject(store)
-                .preferredColorScheme(AppearanceChoice(rawValue: appearance)?.scheme)
+        .sheet(isPresented: Binding(get: { state.infoSetlistID != nil }, set: { if !$0 { state.infoSetlistID = nil } })) {
+            if let id = state.infoSetlistID {
+                SetlistInfoSheet(setlistID: id).environmentObject(store)
+                    .preferredColorScheme(AppearanceChoice(rawValue: appearance)?.scheme)
+            }
         }
         .sheet(isPresented: Binding(get: { state.taggingPatchID != nil }, set: { if !$0 { state.taggingPatchID = nil } })) {
             if let id = state.taggingPatchID {
@@ -141,11 +143,9 @@ struct Sidebar: View {
                         .contextMenu {
                             Button("Rename") { state.selection = .setlist(s.id); state.renaming = .setlist(s.id) }
                             Button("Duplicate") { store.duplicateSetlist(s.id) }
+                            Button("Show Info") { state.infoSetlistID = s.id }
                             Divider()
-                            Button("Delete", role: .destructive) {
-                                if state.selection == .setlist(s.id) { state.selection = .patches }
-                                store.deleteSetlist(s.id)
-                            }
+                            Button("Delete…", role: .destructive) { SetlistActions.confirmDelete(s, store: store, state: state) }
                         }
                     }
                     if !state.tagFilter.isEmpty && !store.setlists.contains(where: { $0.matches(search: "", tags: state.tagFilter) }) {
@@ -165,6 +165,10 @@ struct Sidebar: View {
                 }
             }
             .listStyle(.sidebar)
+            .onKeyPress(.delete) {
+                guard state.renaming == nil, case .setlist(let id) = state.selection, let s = store.setlist(id) else { return .ignored }
+                SetlistActions.confirmDelete(s, store: store, state: state); return .handled
+            }
             .onKeyPress(.return) {
                 guard state.renaming == nil, case .setlist(let id) = state.selection else { return .ignored }
                 state.renaming = .setlist(id); return .handled
