@@ -121,16 +121,16 @@ struct PSRBanksApp: App {
                 Button("Edit Tags…") { if let id = state.currentPatchID(in: store) { state.taggingPatchID = id } }
                     .keyboardShortcut("t").disabled(state.currentPatchID(in: store) == nil)
                 Divider()
-                Button(state.currentPatchID(in: store).map { $0 == store.defaultPatchID } == true ? "Remove Default Mark" : "Set as Default Patch") {
-                    if let id = state.currentPatchID(in: store) { store.setDefaultPatch(id == store.defaultPatchID ? nil : id) }
+                Button(state.currentPatchID(in: store).map { $0 == store.blankPatchID } == true ? "Use Built-in Blank Patch" : "Set as Blank Patch") {
+                    if let id = state.currentPatchID(in: store) { store.setBlankPatch(id == store.blankPatchID ? nil : id) }
                 }
                 .keyboardShortcut("d", modifiers: [.command, .shift]).disabled(state.currentPatchID(in: store) == nil)
-                Button("Use Default Patch in Slot") {
-                    if case .setlist(let id) = state.selection, let p = state.selectedSlot { store.useDefaultPatch(in: id, at: p) }
+                Button("Use Blank Patch in Slot") {
+                    if case .setlist(let id) = state.selection, let p = state.selectedSlot { store.useBlankPatch(in: id, at: p) }
                 }
-                .keyboardShortcut("u", modifiers: [.command, .shift]).disabled(store.defaultPatch == nil || openSetlistID == nil)
-                Button("Fill Empty Slots with Default Patch") { if let id = openSetlistID { store.fillEmptySlots(of: id) } }
-                    .keyboardShortcut("f", modifiers: [.command, .shift]).disabled(store.defaultPatch == nil || openSetlistID == nil)
+                .keyboardShortcut("u", modifiers: [.command, .shift]).disabled(openSetlistID == nil)
+                Button("Fill Empty Slots with Blank Patch") { if let id = openSetlistID { store.fillEmptySlots(of: id) } }
+                    .keyboardShortcut("f", modifiers: [.command, .shift]).disabled(openSetlistID == nil)
                 Divider()
                 Button("Clear Slot") {
                     if case .setlist(let id) = state.selection, let p = state.selectedSlot { store.setSlot(p, of: id, to: nil) }

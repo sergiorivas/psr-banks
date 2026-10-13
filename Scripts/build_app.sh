@@ -11,7 +11,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/PSRBanks" "$APP/Contents/MacOS/PSRBanks"
 cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-cp Sources/PSRCore/Resources/voices_e483.json Sources/PSRCore/Resources/default_header.bin "$APP/Contents/Resources/"
+cp Sources/PSRCore/Resources/voices_e483.json Sources/PSRCore/Resources/default_header.bin Sources/PSRCore/Resources/blank_patch.bin "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<'PL'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

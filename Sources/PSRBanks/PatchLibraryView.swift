@@ -128,7 +128,7 @@ struct PatchRow: View {
             PatchTitle(patch: patch, nameSize: 14, iconEditable: true, rename: renameConfig)
             Spacer(minLength: 8)
             TagRow(tags: patch.meta.tags, limit: 3)
-            if store.defaultPatchID == patch.id { Chip(text: "★ DEFAULT", color: Theme.accent) }
+            if store.blankPatchID == patch.id { Chip(text: "★ BLANK", color: Theme.accent) }
             if patch.meta.splitOn { Chip(text: "SPLIT", color: Theme.warn) }
             if patch.meta.dualOn { Chip(text: "DUAL", color: Theme.good) }
             let used = store.usageCount(of: patch.id)
@@ -152,8 +152,8 @@ struct PatchRow: View {
         .contextMenu {
             Button("Show Info") { state.infoPatchID = patch.id }
             Button("Copy Patch") { PatchClipboard.copy(patch.id) }
-            Button(store.defaultPatchID == patch.id ? "Remove Default Mark" : "Set as Default Patch") {
-                store.setDefaultPatch(store.defaultPatchID == patch.id ? nil : patch.id)
+            Button(store.blankPatchID == patch.id ? "Use Built-in Blank Patch" : "Set as Blank Patch") {
+                store.setBlankPatch(store.blankPatchID == patch.id ? nil : patch.id)
             }
             Button("Rename") { select(); state.renaming = .patchRow(patch.id) }
             IconMenu(patch: patch)

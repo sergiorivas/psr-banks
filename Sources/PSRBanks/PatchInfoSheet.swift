@@ -45,7 +45,7 @@ struct PatchInfoSheet: View {
         let sets = store.setlists.filter { $0.slots.contains(p.id) }
         return section("Library") {
             row("Name", p.name)
-            row("Default patch", store.defaultPatchID == p.id ? "Yes ★" : "No")
+            row("Blank patch", store.blankPatchID == p.id ? "Yes ★" : "No")
             row("Icon", p.icon.title + (p.hasCustomIcon ? " (set by you; automatic would be \(p.inferredIcon.title))" : " (automatic, from the main voice)"))
             row("Tags", p.meta.tags.isEmpty ? "—" : p.meta.tags.map { "#\($0)" }.joined(separator: "  "))
             row("Used in", sets.isEmpty ? "no setlist" : sets.map { "\($0.name) (\($0.slots.filter { $0 == p.id }.count)×)" }.joined(separator: ", "))

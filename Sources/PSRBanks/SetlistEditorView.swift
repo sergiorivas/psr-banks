@@ -179,12 +179,11 @@ struct SlotGrid: View {
                             .contextMenu {
                                 Button("Paste Patch") { if let id = PatchClipboard.pasted(), store.patch(id) != nil { store.setSlot(pos, of: setlist.id, to: id) } }
                                     .disabled(PatchClipboard.pasted().flatMap { store.patch($0) } == nil)
-                                Button("Use Default Patch") { store.useDefaultPatch(in: setlist.id, at: pos) }
-                                    .disabled(store.defaultPatch == nil)
+                                Button("Use Blank Patch") { store.useBlankPatch(in: setlist.id, at: pos) }
                                 if let p = patch {
                                     Divider()
                                     Button("Copy Patch") { PatchClipboard.copy(p.id) }
-                                    Button("Set as Default Patch") { store.setDefaultPatch(p.id) }
+                                    Button("Set as Blank Patch") { store.setBlankPatch(p.id) }
                                     Divider()
                                     Button("Show Info") { state.infoPatchID = p.id }
                                     Button("Rename Patch") { selected = pos; state.renaming = .slot(pos) }
@@ -214,40 +213,22 @@ struct SlotGrid: View {
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
     }
 
-    /// Delete on a slot: the slot gets the default patch. With no default set, warn and offer to empty it instead.
-    private func deleteSlot(_ pos: Int) {
-        if store.useDefaultPatch(in: setlist.id, at: pos) { return }
-        guard store.setlist(setlist.id)?.slots[pos] != nil else { return }
-        let a = NSAlert()
-        a.alertStyle = .warning
-        a.messageText = "No default patch is set"
-        a.informativeText = "Deleting a slot puts the default patch in it, but none is marked. Mark one with Patch ▸ Set as Default Patch (⇧⌘D), "
-            + "or name a patch “\(LibraryStore.blankPatchName)” and it becomes the default automatically.\n\nEmpty \(SlotLayout.label(at: pos)) instead?"
-        a.addButton(withTitle: "Cancel")
-        let b = a.addButton(withTitle: "Empty Slot")
-        b.hasDestructiveAction = true
-        if a.runModal() == .alertSecondButtonReturn { store.setSlot(pos, of: setlist.id, to: nil) }
-    }
+    /// Delete on a slot: the slot gets the blank patch.
+    private func deleteSlot(_ pos: Int) { store.useBlankPatch(in: setlist.id, at: pos) }
 
-    /// Deleting a bank puts the default patch in all 4 memories; asks first, and explains when there is no default.
+    /// Deleting a bank puts the blank patch in all 4 memories; asks first.
     private func confirmDeleteBank(_ bank: Int) {
+        guard let d = store.ensureBlankPatch() else { return }
+        let names = (1...SlotLayout.memories).compactMap { store.patch(setlist.slots[SlotLayout.position(bank: bank, memory: $0)])?.name }
         let a = NSAlert()
         a.alertStyle = .warning
-        guard let d = store.defaultPatch else {
-            a.messageText = "No default patch is set"
-            a.informativeText = "Deleting a bank puts the default patch in its 4 memories, but none is marked. Mark one with Patch ▸ Set as Default Patch (⇧⌘D), "
-                + "or name a patch “\(LibraryStore.blankPatchName)” and it becomes the default automatically."
-            a.addButton(withTitle: "OK")
-            a.runModal(); return
-        }
-        let names = (1...SlotLayout.memories).compactMap { store.patch(setlist.slots[SlotLayout.position(bank: bank, memory: $0)])?.name }
         a.messageText = "Delete Bank \(bank)?"
-        a.informativeText = "The 4 memories of Bank \(bank) in “\(setlist.name)” will be replaced by the default patch “\(d.name)”."
+        a.informativeText = "The 4 memories of Bank \(bank) in “\(setlist.name)” will be replaced by the blank patch “\(d.name)”."
             + (names.isEmpty ? "" : "\n\nCurrently:\n" + names.joined(separator: "\n")) + "\n\nThe patches stay in your library."
         a.addButton(withTitle: "Cancel")
         let b = a.addButton(withTitle: "Delete Bank")
         b.hasDestructiveAction = true
-        if a.runModal() == .alertSecondButtonReturn { store.resetBankToDefault(bank, in: setlist.id) }
+        if a.runModal() == .alertSecondButtonReturn { store.resetBankToBlank(bank, in: setlist.id) }
     }
 
     /// Takes keyboard focus away from the sidebar / lists so the arrow keys drive the grid.
@@ -314,7 +295,7 @@ struct SlotGrid: View {
         case 125: return go(bank + 1, memory)          // down
         case 123: return go(bank, memory - 1)          // left
         case 124: return go(bank, memory + 1)          // right
-        case 51, 117:                                  // delete, forward delete: put the default patch in the slot
+        case 51, 117:                                  // delete, forward delete: put the blank patch in the slot
             deleteSlot(pos)
             return true
         case 36, 76:                                   // return, enter

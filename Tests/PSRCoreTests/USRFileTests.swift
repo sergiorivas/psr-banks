@@ -210,24 +210,28 @@ final class LibraryResilienceTests: XCTestCase {
         XCTAssertThrowsError(try reloaded.buildFile(for: s.id))
     }
 
-    func testBlankPatchBecomesDefaultAndResetBankFillsFourSlots() throws {
+    func testBlankPatchAdoptionBuiltInAndResetBank() throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: tmp) }
         let store = LibraryStore(root: tmp)
         let file = try USRFile(data: Data(contentsOf: USRFileTests.examples.appendingPathComponent("USER001.USR")))
         let a = store.addPatch(record: file.patches[0], name: "A", source: nil)
-        XCTAssertNil(store.defaultPatchID)
+        XCTAssertNil(store.blankPatchID)
         let blank = store.addPatch(record: file.patches[1], name: LibraryStore.blankPatchName, source: nil)
-        XCTAssertEqual(store.defaultPatchID, blank.id)
-        XCTAssertEqual(LibraryStore(root: tmp).defaultPatchID, blank.id)
+        XCTAssertEqual(store.blankPatchID, blank.id)
+        XCTAssertEqual(LibraryStore(root: tmp).blankPatchID, blank.id)
 
         let s = store.createSetlist(name: "S", slots: Array(repeating: a.id, count: 32))
-        XCTAssertTrue(store.resetBankToDefault(2, in: s.id))
+        XCTAssertTrue(store.resetBankToBlank(2, in: s.id))
         let after = try XCTUnwrap(store.setlist(s.id))
         XCTAssertEqual((1...4).map { after.slots[SlotLayout.position(bank: 2, memory: $0)] }, Array(repeating: blank.id, count: 4))
         XCTAssertEqual(after.slots.filter { $0 == blank.id }.count, 4)
-        store.setDefaultPatch(nil)
-        XCTAssertFalse(store.resetBankToDefault(3, in: s.id))
+        // With nothing marked, the copy shipped in the app is created and used.
+        let fresh = LibraryStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)"), seedBlankPatch: true)
+        defer { try? FileManager.default.removeItem(at: fresh.root) }
+        let builtIn = try XCTUnwrap(fresh.blankPatch)
+        XCTAssertEqual(builtIn.name, LibraryStore.blankPatchName); XCTAssertEqual(builtIn.meta.source, "Built-in")
+        XCTAssertEqual(builtIn.data.count, USRFile.patchSize)
         XCTAssertTrue(store.patchFolderURL(a.id).path.hasSuffix("\(a.id.uuidString).patch"))
     }
 
@@ -312,8 +316,8 @@ final class InstrumentIconTests: XCTestCase {
 }
 
 @MainActor
-final class DefaultPatchTests: XCTestCase {
-    func testDefaultPatchLifecycle() throws {
+final class BlankPatchTests: XCTestCase {
+    func testBlankPatchLifecycle() throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: tmp) }
         let store = LibraryStore(root: tmp)
@@ -322,26 +326,28 @@ final class DefaultPatchTests: XCTestCase {
         let a = store.addPatch(record: recs[0], name: "A", source: nil), b = store.addPatch(record: recs[1], name: "B", source: nil)
         let s = store.createSetlist(name: "S", slots: [b.id] + Array(repeating: nil, count: 31))
 
-        XCTAssertNil(store.defaultPatch)
-        XCTAssertFalse(store.useDefaultPatch(in: s.id, at: 3))
-        XCTAssertEqual(store.fillEmptySlots(of: s.id), 0)
+        XCTAssertNil(store.blankPatch)
+        XCTAssertTrue(store.useBlankPatch(in: s.id, at: 3))                      // nothing marked: the built-in blank is created
+        let builtIn = try XCTUnwrap(store.blankPatch)
+        XCTAssertEqual(store.setlist(s.id)?.slots[3], builtIn.id)
+        store.setSlot(3, of: s.id, to: nil)
 
-        store.setDefaultPatch(a.id)
-        XCTAssertEqual(LibraryStore(root: tmp).defaultPatchID, a.id)             // persisted
-        XCTAssertTrue(store.useDefaultPatch(in: s.id, at: 3))
+        store.setBlankPatch(a.id)
+        XCTAssertEqual(LibraryStore(root: tmp).blankPatchID, a.id)             // persisted
+        XCTAssertTrue(store.useBlankPatch(in: s.id, at: 3))
         XCTAssertEqual(store.setlist(s.id)?.slots[3], a.id)
         XCTAssertEqual(store.fillEmptySlots(of: s.id), 30)                       // 32 − slot 0 (B) − slot 3 (already A)
         XCTAssertEqual(store.setlist(s.id)?.slots[0], b.id)                      // existing patches are untouched
         XCTAssertTrue(store.isComplete(store.setlist(s.id)!))
 
-        store.setDefaultPatch(UUID())                                            // unknown id is ignored
-        XCTAssertEqual(store.defaultPatchID, a.id)
+        store.setBlankPatch(UUID())                                            // unknown id is ignored
+        XCTAssertEqual(store.blankPatchID, a.id)
         store.setSlot(3, of: s.id, to: nil); store.setSlot(0, of: s.id, to: nil)
         store.deletePatch(a.id)                                                  // in use → refused
         XCTAssertNotNil(store.patch(a.id))
         for i in 0..<32 { store.setSlot(i, of: s.id, to: b.id) }
         store.deletePatch(a.id)
-        XCTAssertNil(store.defaultPatchID)                                       // deleting the default clears it
+        XCTAssertNil(store.blankPatchID)                                         // deleting the blank patch clears it
     }
 
     func testVersionStringsAreNeverEmpty() {

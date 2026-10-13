@@ -11,7 +11,7 @@ let package = Package(
     targets: [
         .target(
             name: "PSRCore",
-            resources: [.copy("Resources/voices_e483.json"), .copy("Resources/default_header.bin")],
+            resources: [.copy("Resources/voices_e483.json"), .copy("Resources/default_header.bin"), .copy("Resources/blank_patch.bin")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .executableTarget(

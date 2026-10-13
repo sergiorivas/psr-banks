@@ -4,6 +4,11 @@ Versions come from git tags (`Scripts/version.sh`). `Scripts/build_app.sh` write
 *PSR Banks ▸ About* show it. The library folder records its format version and the last app version that opened it
 (`library.json`).
 
+## Unreleased
+- Blank patch replaces “default patch” everywhere. A copy of the “Default <BLANK>” patch ships inside the app and is added to the library when it has none; mark any other patch as the blank patch to override it.
+- Delete on a slot puts the blank patch in it; Delete on a bank (after confirming) puts it in all 4 memories; Delete on a setlist asks first.
+- Show Info for setlists (properties, file path) and the patch file path in patch info; more of a patch decoded (style, transpose, pitch bend, touch, harmony, DSP parts).
+
 ## 0.4.0
 - Bank descriptions: a short editable phrase per bank in each setlist (e.g. “Salsa”, “Song SBC”), shown under the bank name. The label is remembered by the bank's content, so importing the same bank again
   (even after deleting the setlist) restores it.

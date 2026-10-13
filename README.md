@@ -5,7 +5,7 @@ macOS app to keep a library of PSR-E483 registration patches and assemble/export
 ## Features
 
 - Patch library: import `.USR` files, then name, tag, pick an instrument icon for and inspect each patch.
-- Setlists of 8 banks × 4 memories, built by drag and drop, copy/cut/paste, or a default patch.
+- Setlists of 8 banks × 4 memories, built by drag and drop, copy/cut/paste, or a blank patch.
 - Bank descriptions: a short phrase per bank (e.g. "Salsa", "Song SBC"), edited under the bank name. They are kept in
   the app only, not written to the exported `.USR`. A label is remembered for the bank's four patches, so importing
   the same bank again restores it.

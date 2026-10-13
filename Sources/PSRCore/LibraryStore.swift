@@ -27,9 +27,10 @@ public final class LibraryStore: ObservableObject {
     @Published public private(set) var setlists: [SetlistMeta] = []
     @Published public private(set) var root: URL
     @Published public var lastError: String?
-    /// The patch marked as default: what "use default patch" puts into a slot.
-    @Published public private(set) var defaultPatchID: UUID?
+    /// The blank patch: what deleting a slot or a bank puts back. Stored as `defaultPatchID` in library.json (older name).
+    @Published public private(set) var blankPatchID: UUID?
     private var info = LibraryInfo()
+    private let seedsBlank: Bool
     /// Set when `reload` had to skip or repair something; shown once to the user.
     @Published public var loadWarning: String?
 
@@ -52,7 +53,9 @@ public final class LibraryStore: ObservableObject {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("PSR Banks Library")
     }
 
-    public init(root: URL? = nil) {
+    /// The library's own blank patch is created from the built-in one (see `ensureBlankPatch`) when the app opens its real library.
+    public init(root: URL? = nil, seedBlankPatch: Bool? = nil) {
+        seedsBlank = seedBlankPatch ?? (root == nil)
         let saved = UserDefaults.standard.string(forKey: Self.defaultsKey).map { URL(fileURLWithPath: $0) }
         self.root = root ?? saved ?? Self.defaultRoot
         reload()
@@ -100,15 +103,16 @@ public final class LibraryStore: ObservableObject {
         loadInfo()
     }
 
-    // MARK: Library info (version + default patch)
+    // MARK: Library info (version + blank patch)
 
     private var infoURL: URL { root.appendingPathComponent("library.json") }
 
     private func loadInfo() {
         if let d = try? Data(contentsOf: infoURL), let i = try? decoder.decode(LibraryInfo.self, from: d) { info = i } else { info = LibraryInfo() }
         if let id = info.defaultPatchID, patch(id) == nil { info.defaultPatchID = nil }   // its folder was deleted
-        defaultPatchID = info.defaultPatchID
-        adoptBlankAsDefault()
+        blankPatchID = info.defaultPatchID
+        adoptBlankByName()
+        if seedsBlank { ensureBlankPatch() }
         // Only stamp libraries that are not from a newer app.
         if info.formatVersion <= AppVersion.libraryFormat, info.appVersion != AppVersion.marketing {
             info.appVersion = AppVersion.marketing
@@ -120,16 +124,32 @@ public final class LibraryStore: ObservableObject {
         do { try encoder.encode(info).write(to: infoURL, options: .atomic) } catch { lastError = "Could not save library info: \(error.localizedDescription)" }
     }
 
-    public var defaultPatch: Patch? { patch(defaultPatchID) }
+    public var blankPatch: Patch? { patch(blankPatchID) }
 
-    /// A patch with this name is the default patch whenever none has been marked explicitly.
+    /// A patch with this name is the blank patch whenever none has been marked explicitly.
     public static let blankPatchName = "Default <BLANK>"
 
-    private func adoptBlankAsDefault() {
-        guard defaultPatchID == nil, let blank = patches.first(where: { $0.name == Self.blankPatchName }) else { return }
-        info.defaultPatchID = blank.id
-        defaultPatchID = blank.id
+    private func adoptBlankByName() {
+        guard blankPatchID == nil, let blank = patches.first(where: { $0.name == Self.blankPatchName }) else { return }
+        markBlank(blank.id)
+    }
+
+    private func markBlank(_ id: UUID?) {
+        info.defaultPatchID = id
+        blankPatchID = id
         saveInfo()
+    }
+
+    /// The blank patch, creating it from the copy shipped inside the app when the library has none.
+    @discardableResult
+    public func ensureBlankPatch() -> Patch? {
+        if let p = blankPatch { return p }
+        adoptBlankByName()
+        if let p = blankPatch { return p }
+        guard let url = Resources.url("blank_patch", "bin"), let data = try? Data(contentsOf: url), data.count == USRFile.patchSize else { return nil }
+        let p = addPatch(record: data, name: Self.blankPatchName, source: "Built-in")
+        markBlank(p.id)
+        return p
     }
 
     // MARK: Locations on disk
@@ -137,26 +157,24 @@ public final class LibraryStore: ObservableObject {
     public func patchFolderURL(_ id: UUID) -> URL { patchesDir.appendingPathComponent("\(id.uuidString).patch") }
     public func setlistFolderURL(_ id: UUID) -> URL { setlistsDir.appendingPathComponent("\(id.uuidString).setlist") }
 
-    /// Marks a patch as the default (nil clears it).
-    public func setDefaultPatch(_ id: UUID?) {
+    /// Marks a patch as the blank patch (nil goes back to the built-in one).
+    public func setBlankPatch(_ id: UUID?) {
         guard id == nil || patch(id) != nil else { return }
-        info.defaultPatchID = id
-        defaultPatchID = id
-        saveInfo()
+        markBlank(id)
     }
 
-    /// Puts the default patch into one slot. Returns false when there is no default.
+    /// Puts the blank patch into one slot.
     @discardableResult
-    public func useDefaultPatch(in setlistID: UUID, at position: Int) -> Bool {
-        guard let d = defaultPatch else { return false }
+    public func useBlankPatch(in setlistID: UUID, at position: Int) -> Bool {
+        guard let d = ensureBlankPatch() else { return false }
         setSlot(position, of: setlistID, to: d.id)
         return true
     }
 
-    /// Fills every empty (or missing-patch) slot with the default patch; returns how many were filled.
+    /// Fills every empty (or missing-patch) slot with the blank patch; returns how many were filled.
     @discardableResult
     public func fillEmptySlots(of setlistID: UUID) -> Int {
-        guard let d = defaultPatch, var s = setlist(setlistID) else { return 0 }
+        guard let d = ensureBlankPatch(), var s = setlist(setlistID) else { return 0 }
         var n = 0
         for i in s.slots.indices where patch(s.slots[i]) == nil { s.slots[i] = d.id; n += 1 }
         if n > 0 { updateSetlist(s) }
@@ -197,7 +215,7 @@ public final class LibraryStore: ObservableObject {
         write(patch)
         patches.append(patch)
         sortPatches()
-        adoptBlankAsDefault()
+        adoptBlankByName()
         return patch
     }
 
@@ -205,7 +223,7 @@ public final class LibraryStore: ObservableObject {
         guard let i = patches.firstIndex(where: { $0.id == id }) else { return }
         patches[i].meta.name = name
         write(patches[i])
-        adoptBlankAsDefault()
+        adoptBlankByName()
     }
 
     /// Pass nil to go back to the automatic icon.
@@ -220,7 +238,7 @@ public final class LibraryStore: ObservableObject {
         guard usageCount(of: id) == 0 else { lastError = LibraryError.patchInUse(p.name).localizedDescription; return }
         try? fm.removeItem(at: patchesDir.appendingPathComponent("\(id.uuidString).patch"))
         patches.removeAll { $0.id == id }
-        if defaultPatchID == id { setDefaultPatch(nil) }
+        if blankPatchID == id { markBlank(nil) }
     }
 
     private func sortPatches() { patches.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending } }
@@ -303,10 +321,10 @@ public final class LibraryStore: ObservableObject {
         updateSetlist(s)
     }
 
-    /// Puts the default patch into the 4 memories of a bank (1-based). Returns false when there is no default patch.
+    /// Puts the blank patch into the 4 memories of a bank (1-based).
     @discardableResult
-    public func resetBankToDefault(_ bank: Int, in setlistID: UUID) -> Bool {
-        guard let d = defaultPatch, var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return false }
+    public func resetBankToBlank(_ bank: Int, in setlistID: UUID) -> Bool {
+        guard let d = ensureBlankPatch(), var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return false }
         for m in 1...SlotLayout.memories { s.slots[SlotLayout.position(bank: bank, memory: m)] = d.id }
         updateSetlist(s)
         return true
