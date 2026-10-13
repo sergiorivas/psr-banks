@@ -108,6 +108,7 @@ public final class LibraryStore: ObservableObject {
         if let d = try? Data(contentsOf: infoURL), let i = try? decoder.decode(LibraryInfo.self, from: d) { info = i } else { info = LibraryInfo() }
         if let id = info.defaultPatchID, patch(id) == nil { info.defaultPatchID = nil }   // its folder was deleted
         defaultPatchID = info.defaultPatchID
+        adoptBlankAsDefault()
         // Only stamp libraries that are not from a newer app.
         if info.formatVersion <= AppVersion.libraryFormat, info.appVersion != AppVersion.marketing {
             info.appVersion = AppVersion.marketing
@@ -120,6 +121,21 @@ public final class LibraryStore: ObservableObject {
     }
 
     public var defaultPatch: Patch? { patch(defaultPatchID) }
+
+    /// A patch with this name is the default patch whenever none has been marked explicitly.
+    public static let blankPatchName = "Default <BLANK>"
+
+    private func adoptBlankAsDefault() {
+        guard defaultPatchID == nil, let blank = patches.first(where: { $0.name == Self.blankPatchName }) else { return }
+        info.defaultPatchID = blank.id
+        defaultPatchID = blank.id
+        saveInfo()
+    }
+
+    // MARK: Locations on disk
+
+    public func patchFolderURL(_ id: UUID) -> URL { patchesDir.appendingPathComponent("\(id.uuidString).patch") }
+    public func setlistFolderURL(_ id: UUID) -> URL { setlistsDir.appendingPathComponent("\(id.uuidString).setlist") }
 
     /// Marks a patch as the default (nil clears it).
     public func setDefaultPatch(_ id: UUID?) {
@@ -181,6 +197,7 @@ public final class LibraryStore: ObservableObject {
         write(patch)
         patches.append(patch)
         sortPatches()
+        adoptBlankAsDefault()
         return patch
     }
 
@@ -188,6 +205,7 @@ public final class LibraryStore: ObservableObject {
         guard let i = patches.firstIndex(where: { $0.id == id }) else { return }
         patches[i].meta.name = name
         write(patches[i])
+        adoptBlankAsDefault()
     }
 
     /// Pass nil to go back to the automatic icon.
@@ -282,6 +300,14 @@ public final class LibraryStore: ObservableObject {
     public func swapSlots(_ a: Int, _ b: Int, in setlistID: UUID) {
         guard var s = setlist(setlistID), s.slots.indices.contains(a), s.slots.indices.contains(b) else { return }
         s.slots.swapAt(a, b)
+        updateSetlist(s)
+    }
+
+    /// Empties the 4 memories of a bank (1-based) and drops its description. The patches stay in the library.
+    public func clearBank(_ bank: Int, in setlistID: UUID) {
+        guard var s = setlist(setlistID), (1...SlotLayout.banks).contains(bank) else { return }
+        for m in 1...SlotLayout.memories { s.slots[SlotLayout.position(bank: bank, memory: m)] = nil }
+        s.bankDescriptions[bank - 1] = ""
         updateSetlist(s)
     }
 

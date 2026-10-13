@@ -36,7 +36,7 @@ struct ShortcutsSheet: View {
     private let groups: [(String, [(String, String)])] = [
         ("Library", [("⌘O", "Import a USR file"), ("⌘N", "New setlist"), ("⌘E", "Export the open setlist"), ("⌘D", "Duplicate the open setlist"),
                      ("⌘F", "Search"), ("⌘1", "Patches"), ("⌘2 … ⌘9", "Open setlist 1 … 8 (in sidebar order)")]),
-        ("Selected patch (slot in a setlist, or row in the patch list)", [("⌘I", "Show info"), ("⌘R", "Rename in place"), ("⌘T", "Edit tags"), ("⌘⌫", "Clear the slot (setlist only)"),
+        ("Selected patch (slot in a setlist, or row in the patch list)", [("⌘I", "Show info"), ("⌘R", "Rename in place"), ("⌘T", "Edit tags"), ("⌘⌫", "Empty the slot (setlist only)"),
                      ("⇧⌘R", "Rename the open setlist")]),
         ("Copy, paste and default patch", [("⌘C / ⌘X", "Copy / cut the selected patch (slot or list row)"), ("⌘V", "Paste it into the selected slot"),
                      ("⇧⌘D", "Mark the selected patch as the default patch"), ("⇧⌘U", "Put the default patch into the selected slot"),
@@ -44,8 +44,9 @@ struct ShortcutsSheet: View {
         ("Renaming (patches, slots and setlists)", [("Click a selected name", "Edit it in place, like Finder"), ("Double-click a name", "Edit it right away"), ("Return", "Save the new name (or start editing a selected item)"),
                      ("Esc", "Cancel"), ("Click elsewhere", "Save")]),
         ("Patch list", [("↑ ↓", "Move the selection")]),
-        ("Setlist grid (click a slot first)", [("← →", "Previous / next memory"), ("↑ ↓", "Previous / next bank"), ("⌫", "Clear the slot"), ("Return", "Rename the patch"), ("Space", "Show the patch info"),
+        ("Setlist grid (click a slot first)", [("← →", "Previous / next memory"), ("↑ ↓", "Previous / next bank"), ("⌫", "Put the default patch in the slot (asks first if no default is set)"), ("Return", "Rename the patch"), ("Space", "Show the patch info"),
                      ("Double-click a patch", "Put it in the selected slot and move on")]),
+        ("Setlist grid (click a bank name first)", [("↑ ↓", "Previous / next bank"), ("→", "Go to the bank's first memory"), ("⌫", "Delete the bank (asks first)"), ("Space", "Show the bank info")]),
         ("Windows", [("⌘/", "This list (the app version is at the bottom of the sidebar)"), ("⌘W", "Close window"), ("⌘Q", "Quit")]),
     ]
 

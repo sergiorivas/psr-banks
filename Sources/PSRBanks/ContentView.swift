@@ -59,6 +59,10 @@ struct ContentView: View {
                     .preferredColorScheme(AppearanceChoice(rawValue: appearance)?.scheme)
             }
         }
+        .sheet(item: $state.infoBank) { ref in
+            BankInfoSheet(setlistID: ref.setlistID, bank: ref.bank).environmentObject(store)
+                .preferredColorScheme(AppearanceChoice(rawValue: appearance)?.scheme)
+        }
         .sheet(isPresented: Binding(get: { state.taggingPatchID != nil }, set: { if !$0 { state.taggingPatchID = nil } })) {
             if let id = state.taggingPatchID {
                 PatchTagSheet(patchID: id).environmentObject(store)

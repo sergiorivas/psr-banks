@@ -51,6 +51,12 @@ struct PatchInfoSheet: View {
             row("Used in", sets.isEmpty ? "no setlist" : sets.map { "\($0.name) (\($0.slots.filter { $0 == p.id }.count)×)" }.joined(separator: ", "))
             row("Added", p.meta.createdAt.formatted(date: .abbreviated, time: .shortened))
             row("Imported from", p.meta.source ?? "—")
+            row("File", store.patchFolderURL(p.id).path, mono: true)
+            HStack {
+                Spacer().frame(width: 142)
+                Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([store.patchFolderURL(p.id).appendingPathComponent("record.bin")]) }
+                    .controlSize(.small)
+            }
             row("Identity (SHA-256)", String(p.meta.hash.prefix(32)) + "…", mono: true)
         }
     }
@@ -96,13 +102,17 @@ struct PatchInfoSheet: View {
         section("Other settings") {
             row("Split point", "\(PatchDetails.noteName(d.splitPoint))  (MIDI \(d.splitPoint))"
                 + (d.splitPointBytesAgree ? "" : "  ⚠︎ the two stored copies differ"))
-            row("Harmony", "\(d.harmonyName) · volume \(d.harmonyVolume)")
-            row("DSP 1", "\(d.dsp1On ? "On" : "Off") · type \(d.dsp1Type)")
-            row("DSP 2", "\(d.dsp2On ? "On" : "Off") · type code \(d.dsp2TypeRaw)")
-            row("Style data", d.hasStyle ? "saved with this patch" : "none saved (voices only)")
+            row("Transpose", d.transpose > 0 ? "+\(d.transpose)" : "\(d.transpose)")
+            row("Pitch-bend range", "\(d.pitchBendRange)")
+            row("Touch response", ["Off", "1 Soft", "2 Medium", "3 Hard"][safe: d.touchResponse] ?? "code \(d.touchResponse)")
+            row("Reverb level", "\(d.reverbLevel)")
+            row("Harmony", "\(d.harmonyOn ? "On" : "Off") · \(d.harmonyName) · volume \(d.harmonyVolume)")
+            row("DSP 1", "\(d.dsp1On ? "On" : "Off") · type \(d.dsp1Type) · \(PatchDetails.dspPartName(d.dsp1Part, isDSP1: true))")
+            row("DSP 2", "\(d.dsp2On ? "On" : "Off") · type code \(d.dsp2TypeRaw) · \(PatchDetails.dspPartName(d.dsp2Part, isDSP1: false))")
+            row("Style", d.styleNumber.map { "No. \($0) · volume \(d.styleVolume ?? 0)" } ?? "none saved (voices only)")
             row("Head bytes", d.head.map { String(format: "%02X", $0) }.joined(separator: " "), mono: true)
-            Text("Not decoded yet: transpose, tuning, pitch-bend range, touch response, arpeggio, DSP knobs and DSP target part. "
-                 + "The DSP 2 type is shown as the stored code because its numbering isn’t confirmed. Harmony names are only known for Duet, Trio and Octave.")
+            Text("Not decoded yet: tuning, arpeggio, master EQ, reverb and chorus type, DSP knobs. "
+                 + "Reverb level and harmony on/off are inferred from one bank. The DSP 2 type is shown as the stored code because its numbering isn’t confirmed. Only some harmony and DSP part names are confirmed.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -150,4 +160,8 @@ struct PatchInfoSheet: View {
             ForEach(voices, id: \.role) { v in Text(value(v)).font(.system(size: 12, design: .rounded)).monospacedDigit() }
         }
     }
+}
+
+private extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

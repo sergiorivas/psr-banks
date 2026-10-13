@@ -210,6 +210,27 @@ final class LibraryResilienceTests: XCTestCase {
         XCTAssertThrowsError(try reloaded.buildFile(for: s.id))
     }
 
+    func testBlankPatchBecomesDefaultAndClearBankEmptiesFourSlots() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let store = LibraryStore(root: tmp)
+        let file = try USRFile(data: Data(contentsOf: USRFileTests.examples.appendingPathComponent("USER001.USR")))
+        let a = store.addPatch(record: file.patches[0], name: "A", source: nil)
+        XCTAssertNil(store.defaultPatchID)
+        let blank = store.addPatch(record: file.patches[1], name: LibraryStore.blankPatchName, source: nil)
+        XCTAssertEqual(store.defaultPatchID, blank.id)
+        XCTAssertEqual(LibraryStore(root: tmp).defaultPatchID, blank.id)
+
+        let s = store.createSetlist(name: "S", slots: Array(repeating: a.id, count: 32))
+        store.setBankDescription("Salsa", bank: 2, in: s.id)
+        store.clearBank(2, in: s.id)
+        let after = try XCTUnwrap(store.setlist(s.id))
+        XCTAssertEqual(after.slots.compactMap { $0 }.count, 28)
+        XCTAssertEqual((1...4).map { after.slots[SlotLayout.position(bank: 2, memory: $0)] }.compactMap { $0 }.count, 0)
+        XCTAssertEqual(after.bankDescriptions[1], "")
+        XCTAssertTrue(store.patchFolderURL(a.id).path.hasSuffix("\(a.id.uuidString).patch"))
+    }
+
     func testSetlistPointingAtDeletedPatchCountsAsEmpty() throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: tmp) }
@@ -237,6 +258,17 @@ final class PatchDetailsTests: XCTestCase {
         XCTAssertEqual(d.dsp1Type, 6); XCTAssertTrue(d.dsp1On); XCTAssertFalse(d.dsp2On)
         XCTAssertEqual(PatchDetails.noteName(d.splitPoint), "F#2")
         XCTAssertTrue(d.splitPointBytesAgree)
+    }
+
+    /// Bank 8 / Memory 1 with distinctive values set on the keyboard (transpose 1, style 003, echo harmony, ...).
+    func testDistinctiveBankDecodes() {
+        let hex = "0100020037370565000700000001016f411101414243447f006afe513d09027f0080ff2e3f5b024748494b030341027f1a500000000000000000270002000d007c00017f00004040404040404040404040400c0057044c027f011f003b00400000000064646464007f005b007f0040000074210000751b0000710100681730006800590068155a64646464646464646500"
+        let rec = Data((0..<hex.count / 2).map { UInt8(hex[hex.index(hex.startIndex, offsetBy: $0 * 2)...].prefix(2), radix: 16)! })
+        let d = PatchDetails(record: rec)
+        XCTAssertEqual(d.styleNumber, 3); XCTAssertEqual(d.styleVolume, 101)
+        XCTAssertEqual(d.transpose, 1); XCTAssertEqual(d.pitchBendRange, 3); XCTAssertEqual(d.touchResponse, 3)
+        XCTAssertEqual(d.harmonyName, "Echo 1/32"); XCTAssertTrue(d.harmonyOn); XCTAssertEqual(d.harmonyVolume, 80)
+        XCTAssertEqual(d.dsp1Type, 32); XCTAssertEqual(d.dsp2Part, 2); XCTAssertEqual(d.dsp1Part, 0)
     }
 
     func testNoteAndPanNames() {

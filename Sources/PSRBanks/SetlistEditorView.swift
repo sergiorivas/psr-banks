@@ -153,14 +153,26 @@ struct SlotGrid: View {
                         HStack(spacing: 6) {
                             Circle().fill(Theme.bankHues[bank - 1]).frame(width: 8, height: 8)
                             Text("Bank \(bank)").font(.system(size: 12, weight: .semibold, design: .rounded))
+                            Spacer(minLength: 0)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { grabKeyboard(); state.selectedBank = bank; selected = nil }
+                        .contextMenu {
+                            Button("Show Info") { state.infoBank = .init(setlistID: setlist.id, bank: bank) }
+                            Divider()
+                            Button("Delete Bank…", role: .destructive) { confirmDeleteBank(bank) }
                         }
                         BankDescriptionField(setlistID: setlist.id, bank: bank, text: setlist.bankDescriptions[bank - 1])
-                    }.frame(width: bankLabelWidth, alignment: .leading)
+                    }
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(state.selectedBank == bank ? Theme.accent.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(state.selectedBank == bank ? Theme.accent : .clear, lineWidth: 2))
+                    .frame(width: bankLabelWidth, alignment: .leading)
                     ForEach(1...SlotLayout.memories, id: \.self) { memory in
                         let pos = SlotLayout.position(bank: bank, memory: memory)
                         let patch = store.patch(setlist.slots[pos])
                         SlotCell(position: pos, patch: patch, rename: patch.map { renameConfig(pos, $0) }, missing: patch == nil && setlist.slots[pos] != nil, selected: selected == pos, dropTarget: targeted == pos, tint: Theme.bankHues[bank - 1])
-                            .onTapGesture { grabKeyboard(); selected = pos }
+                            .onTapGesture { grabKeyboard(); state.selectedBank = nil; selected = pos }
                             .onDrag {
                                 state.dragging = .slot(pos)
                                 return NSItemProvider(object: DragItem.slot(pos).payload as NSString)
@@ -201,7 +213,36 @@ struct SlotGrid: View {
         .onAppear {
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in handle(event) ? nil : event }
         }
+        .onChange(of: selected) { _, new in if new != nil { state.selectedBank = nil } }
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+    }
+
+    /// Delete on a slot: the slot gets the default patch. With no default set, warn and offer to empty it instead.
+    private func deleteSlot(_ pos: Int) {
+        if store.useDefaultPatch(in: setlist.id, at: pos) { return }
+        guard store.setlist(setlist.id)?.slots[pos] != nil else { return }
+        let a = NSAlert()
+        a.alertStyle = .warning
+        a.messageText = "No default patch is set"
+        a.informativeText = "Deleting a slot puts the default patch in it, but none is marked. Mark one with Patch ▸ Set as Default Patch (⇧⌘D), "
+            + "or name a patch “\(LibraryStore.blankPatchName)” and it becomes the default automatically.\n\nEmpty \(SlotLayout.label(at: pos)) instead?"
+        a.addButton(withTitle: "Cancel")
+        let b = a.addButton(withTitle: "Empty Slot")
+        b.hasDestructiveAction = true
+        if a.runModal() == .alertSecondButtonReturn { store.setSlot(pos, of: setlist.id, to: nil) }
+    }
+
+    private func confirmDeleteBank(_ bank: Int) {
+        let names = (1...SlotLayout.memories).compactMap { store.patch(setlist.slots[SlotLayout.position(bank: bank, memory: $0)])?.name }
+        let a = NSAlert()
+        a.alertStyle = .warning
+        a.messageText = "Delete Bank \(bank)?"
+        a.informativeText = "All 4 memories of Bank \(bank) in “\(setlist.name)” will be emptied and its description removed."
+            + (names.isEmpty ? "" : "\n\n" + names.joined(separator: "\n")) + "\n\nThe patches stay in your library. The setlist cannot be exported until the bank is filled again."
+        a.addButton(withTitle: "Cancel")
+        let b = a.addButton(withTitle: "Delete Bank")
+        b.hasDestructiveAction = true
+        if a.runModal() == .alertSecondButtonReturn { store.clearBank(bank, in: setlist.id) }
     }
 
     /// Takes keyboard focus away from the sidebar / lists so the arrow keys drive the grid.
@@ -230,8 +271,19 @@ struct SlotGrid: View {
               state.renaming == nil, case .setlist(let id) = state.selection, id == setlist.id else { return false }
         let responder = window.firstResponder
         if responder is NSTextView || responder is NSTableView || responder is NSOutlineView { return false }
-        guard let pos = selected, let current = store.setlist(id) else { return false }
         let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if let bank = state.selectedBank, mods.isEmpty {
+            switch event.keyCode {
+            case 126: state.selectedBank = max(bank - 1, 1); return true                   // up
+            case 125: state.selectedBank = min(bank + 1, SlotLayout.banks); return true    // down
+            case 124:                                                                      // right: into the bank's first memory
+                state.selectedBank = nil; selected = SlotLayout.position(bank: bank, memory: 1); return true
+            case 51, 117: confirmDeleteBank(bank); return true
+            case 49: state.infoBank = .init(setlistID: id, bank: bank); return true
+            default: return false
+            }
+        }
+        guard let pos = selected, let current = store.setlist(id) else { return false }
         if mods == .command, let key = event.charactersIgnoringModifiers?.lowercased() {
             switch key {
             case "c":
@@ -258,9 +310,9 @@ struct SlotGrid: View {
         case 125: return go(bank + 1, memory)          // down
         case 123: return go(bank, memory - 1)          // left
         case 124: return go(bank, memory + 1)          // right
-        case 51, 117:                                  // delete, forward delete
-            guard current.slots[pos] != nil else { return false }
-            store.setSlot(pos, of: id, to: nil); return true
+        case 51, 117:                                  // delete, forward delete: put the default patch in the slot
+            deleteSlot(pos)
+            return true
         case 36, 76:                                   // return, enter
             guard patch != nil else { return false }
             state.renaming = .slot(pos); return true
