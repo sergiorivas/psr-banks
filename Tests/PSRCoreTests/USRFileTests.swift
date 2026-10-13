@@ -226,6 +226,12 @@ final class LibraryResilienceTests: XCTestCase {
         let after = try XCTUnwrap(store.setlist(s.id))
         XCTAssertEqual((1...4).map { after.slots[SlotLayout.position(bank: 2, memory: $0)] }, Array(repeating: blank.id, count: 4))
         XCTAssertEqual(after.slots.filter { $0 == blank.id }.count, 4)
+        // A library from before 0.5 has the blank patch under its old name: it is adopted and renamed.
+        let legacy = LibraryStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)"))
+        defer { try? FileManager.default.removeItem(at: legacy.root) }
+        let old = legacy.addPatch(record: file.patches[5], name: "Default <BLANK>", source: nil)
+        XCTAssertEqual(legacy.blankPatchID, old.id); XCTAssertEqual(legacy.patch(old.id)?.name, "BLANK")
+        XCTAssertEqual(LibraryStore(root: legacy.root).patch(old.id)?.name, "BLANK")
         // With nothing marked, the copy shipped in the app is created and used.
         let fresh = LibraryStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("psr-test-\(UUID().uuidString)"), seedBlankPatch: true)
         defer { try? FileManager.default.removeItem(at: fresh.root) }

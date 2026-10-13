@@ -127,11 +127,19 @@ public final class LibraryStore: ObservableObject {
     public var blankPatch: Patch? { patch(blankPatchID) }
 
     /// A patch with this name is the blank patch whenever none has been marked explicitly.
-    public static let blankPatchName = "Default <BLANK>"
+    public static let blankPatchName = "BLANK"
+    /// What the blank patch was called before 0.5; such a patch is adopted and renamed.
+    private static let legacyBlankPatchName = "Default <BLANK>"
 
     private func adoptBlankByName() {
-        guard blankPatchID == nil, let blank = patches.first(where: { $0.name == Self.blankPatchName }) else { return }
-        markBlank(blank.id)
+        if blankPatchID == nil, let blank = patches.first(where: { $0.name == Self.blankPatchName })
+            ?? patches.first(where: { $0.name == Self.legacyBlankPatchName }) { markBlank(blank.id) }
+        if let b = blankPatch, b.name == Self.legacyBlankPatchName,
+           let i = patches.firstIndex(where: { $0.id == b.id }), !patches.contains(where: { $0.name == Self.blankPatchName }) {
+            patches[i].meta.name = Self.blankPatchName
+            write(patches[i])
+            sortPatches()
+        }
     }
 
     private func markBlank(_ id: UUID?) {

@@ -168,7 +168,7 @@ struct SlotGrid: View {
                     ForEach(1...SlotLayout.memories, id: \.self) { memory in
                         let pos = SlotLayout.position(bank: bank, memory: memory)
                         let patch = store.patch(setlist.slots[pos])
-                        SlotCell(position: pos, patch: patch, rename: patch.map { renameConfig(pos, $0) }, missing: patch == nil && setlist.slots[pos] != nil, selected: selected == pos, dropTarget: targeted == pos, tint: Theme.bankHues[bank - 1])
+                        SlotCell(position: pos, patch: patch, rename: patch.map { renameConfig(pos, $0) }, missing: patch == nil && setlist.slots[pos] != nil, blank: patch != nil && patch?.id == store.blankPatchID, selected: selected == pos, dropTarget: targeted == pos, tint: Theme.bankHues[bank - 1])
                             .onTapGesture { grabKeyboard(); state.selectedBank = nil; selected = pos }
                             .onDrag {
                                 state.dragging = .slot(pos)
@@ -378,6 +378,7 @@ struct SlotCell: View {
     let patch: Patch?
     var rename: RenameConfig?
     var missing = false
+    var blank = false
     let selected: Bool
     let dropTarget: Bool
     let tint: Color
@@ -404,6 +405,7 @@ struct SlotCell: View {
                 }
             }
         }
+        .opacity(blank ? 0.45 : 1)
         .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(dropTarget ? Theme.accent.opacity(0.22) : (patch == nil ? Theme.well : tint.opacity(0.14)), in: shape)

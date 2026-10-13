@@ -131,6 +131,7 @@ struct TagButton: View {
 
 /// Instrument icon + the patch name with its main voice always shown underneath.
 struct PatchTitle: View {
+    @EnvironmentObject var store: LibraryStore
     let patch: Patch
     var nameSize: CGFloat = 13
     var iconEditable = false
@@ -147,6 +148,7 @@ struct PatchTitle: View {
                     .font(.system(size: nameSize - 2)).foregroundStyle(.secondary)
             }
         }
+        .opacity(store.blankPatchID == patch.id ? 0.45 : 1)   // the blank patch is a placeholder: shown grayed out
     }
 }
 
