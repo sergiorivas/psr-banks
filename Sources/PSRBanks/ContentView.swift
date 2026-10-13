@@ -110,6 +110,19 @@ struct Sidebar: View {
 
     @EnvironmentObject var store: LibraryStore
     @EnvironmentObject var state: AppState
+    @State private var keyMonitor: Any?
+
+    /// ⌫ with the sidebar focused deletes the selected setlist (after asking). Window-level, like the slot grid,
+    /// and limited to the sidebar's outline view so the patch lists and text fields keep their own keys.
+    private func handleDelete(_ event: NSEvent) -> Bool {
+        guard event.keyCode == 51 || event.keyCode == 117,
+              event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+              let window = NSApp.keyWindow, window.attachedSheet == nil, NSApp.modalWindow == nil,
+              window.firstResponder is NSOutlineView, state.renaming == nil,
+              case .setlist(let id) = state.selection, let s = store.setlist(id) else { return false }
+        SetlistActions.confirmDelete(s, store: store, state: state)
+        return true
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -165,10 +178,10 @@ struct Sidebar: View {
                 }
             }
             .listStyle(.sidebar)
-            .onKeyPress(.delete) {
-                guard state.renaming == nil, case .setlist(let id) = state.selection, let s = store.setlist(id) else { return .ignored }
-                SetlistActions.confirmDelete(s, store: store, state: state); return .handled
+            .onAppear {
+                keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in handleDelete(event) ? nil : event }
             }
+            .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
             .onKeyPress(.return) {
                 guard state.renaming == nil, case .setlist(let id) = state.selection else { return .ignored }
                 state.renaming = .setlist(id); return .handled
