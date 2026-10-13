@@ -76,6 +76,15 @@ public struct PatchDetails {
     public let dsp1Type: Int          // 1-based number as shown on the keyboard
     public let dsp2TypeRaw: Int       // encoding not confirmed
     public let hasStyle: Bool
+    public let styleNumber: Int?      // 1-based; nil when the patch carries no style
+    public let styleVolume: Int?
+    public let transpose: Int         // semitones, stored +12
+    public let pitchBendRange: Int
+    public let touchResponse: Int     // 1 Soft, 2 Medium, 3 Hard
+    public let harmonyOn: Bool        // probable, from one bank
+    public let reverbLevel: Int       // probable, from one bank
+    public let dsp1Part: Int          // 0 = Main Voice
+    public let dsp2Part: Int          // 2 = Keyboard
     public let head: [UInt8]
 
     public init(record r: Data) {
@@ -97,6 +106,14 @@ public struct PatchDetails {
         dsp2On = b[88] == 0x7F; dsp1On = b[89] == 1
         dsp2TypeRaw = Int(b[82]); dsp1Type = Int(b[90]) + 1
         hasStyle = PatchInfo(record: r).hasStyle
+        styleNumber = hasStyle ? Int(b[2]) + 1 : nil
+        styleVolume = hasStyle ? Int(b[7]) : nil
+        transpose = Int(b[62]) - 12
+        pitchBendRange = Int(b[43])
+        touchResponse = Int(b[44])
+        reverbLevel = Int(b[45])
+        harmonyOn = b[47] == 0x7F
+        dsp1Part = Int(b[91]); dsp2Part = Int(b[87])
         head = Array(b[0..<4])
     }
 
@@ -108,12 +125,22 @@ public struct PatchDetails {
 
     public static func panName(_ v: Int) -> String { v == 64 ? "C" : (v < 64 ? "L\(64 - v)" : "R\(v - 64)") }
 
+    /// Names for 1...26 follow the keyboard's list; only Octave (5) and Echo 1/32 (26) are confirmed against real banks.
     public var harmonyName: String {
+        let base = ["Duet", "Trio", "Block", "Country", "Octave"]
+        let rates = ["1/4", "1/6", "1/8", "1/12", "1/16", "1/24", "1/32"]
         switch harmonyType {
-        case 1: return "Duet"
-        case 2: return "Trio"
-        case 5: return "Octave"
+        case 1...5: return base[harmonyType - 1]
+        case 6...12: return "Trill " + rates[harmonyType - 6]
+        case 13...19: return "Tremolo " + rates[harmonyType - 13]
+        case 20...26: return "Echo " + rates[harmonyType - 20]
         default: return "Type \(harmonyType)"
         }
+    }
+
+    public static func dspPartName(_ v: Int, isDSP1: Bool) -> String {
+        if isDSP1 && v == 0 { return "Main Voice" }
+        if !isDSP1 && v == 2 { return "Keyboard" }
+        return "part code \(v)"
     }
 }
