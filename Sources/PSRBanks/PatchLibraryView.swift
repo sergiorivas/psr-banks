@@ -183,6 +183,11 @@ struct PatchRow: View {
         .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        // A plain click anywhere on the row selects it (the drag handler otherwise swallows clicks on the empty space);
+        // clicks with ⌘/⇧ are left to the list so multi-select keeps working.
+        .onTapGesture {
+            if NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty { select() }
+        }
         .onDrag {
             state.dragging = .patch(patch.id)
             return NSItemProvider(object: DragItem.patch(patch.id).payload as NSString)
