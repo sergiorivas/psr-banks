@@ -44,16 +44,12 @@ struct PatchLibraryView: View {
                         if filtered.isEmpty {
                             Text("No patch matches this search.").foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
                         } else {
-                            List(selection: $multiSelection) {
+                            List(selection: listSelection) {
                                 ForEach(filtered) { p in
-                                    PatchRow(patch: p, select: { state.selectedPatchID = p.id }).tag(p.id)
+                                    PatchRow(patch: p, select: { multiSelection = [p.id]; state.selectedPatchID = p.id }).tag(p.id)
                                 }
                             }
                             .listStyle(.plain).scrollContentBackground(.hidden)
-                            .onChange(of: multiSelection) { _, new in
-                                let single = new.count == 1 ? new.first : nil
-                                if state.selectedPatchID != single { state.selectedPatchID = single }
-                            }
                             .onChange(of: state.selectedPatchID) { _, id in
                                 if let id, !multiSelection.contains(id) { multiSelection = [id] }
                             }
@@ -81,6 +77,14 @@ struct PatchLibraryView: View {
             }
         }
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+    }
+
+    /// Writes the multi-selection and the single selected patch together so a click never leaves them out of step.
+    private var listSelection: Binding<Set<UUID>> {
+        Binding(get: { multiSelection }, set: { new in
+            multiSelection = new
+            state.selectedPatchID = new.count == 1 ? new.first : nil
+        })
     }
 
     /// Asks before deleting the selected patches; patches still used by a setlist are kept.
