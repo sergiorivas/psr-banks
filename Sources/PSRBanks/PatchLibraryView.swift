@@ -7,6 +7,7 @@ struct PatchLibraryView: View {
     @State private var search = ""
     @FocusState private var searchFocused: Bool
     @State private var keyMonitor: Any?
+    @State private var multiSelection: Set<UUID> = []
 
     private var filtered: [Patch] { store.patches.filter { $0.matches(search: search, tags: state.tagFilter) } }
 
@@ -43,12 +44,21 @@ struct PatchLibraryView: View {
                         if filtered.isEmpty {
                             Text("No patch matches this search.").foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
                         } else {
-                            List(selection: $state.selectedPatchID) {
+                            List(selection: $multiSelection) {
                                 ForEach(filtered) { p in
                                     PatchRow(patch: p, select: { state.selectedPatchID = p.id }).tag(p.id)
                                 }
                             }
                             .listStyle(.plain).scrollContentBackground(.hidden)
+                            .onChange(of: multiSelection) { _, new in
+                                let single = new.count == 1 ? new.first : nil
+                                if state.selectedPatchID != single { state.selectedPatchID = single }
+                            }
+                            .onChange(of: state.selectedPatchID) { _, id in
+                                if let id, !multiSelection.contains(id) { multiSelection = [id] }
+                            }
+                            .onAppear { if let id = state.selectedPatchID { multiSelection = [id] } }
+                            .onDeleteCommand { confirmDelete(multiSelection) }
                             .onKeyPress(.return) {
                                 guard state.renaming == nil, let id = state.selectedPatchID, filtered.contains(where: { $0.id == id }) else { return .ignored }
                                 state.renaming = .patchRow(id); return .handled
@@ -71,6 +81,31 @@ struct PatchLibraryView: View {
             }
         }
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+    }
+
+    /// Asks before deleting the selected patches; patches still used by a setlist are kept.
+    private func confirmDelete(_ ids: Set<UUID>) {
+        guard state.renaming == nil else { return }
+        let patches = store.patches.filter { ids.contains($0.id) }
+        guard !patches.isEmpty else { return }
+        let deletable = patches.filter { store.usageCount(of: $0.id) == 0 }
+        let kept = patches.count - deletable.count
+        let a = NSAlert()
+        a.alertStyle = .warning
+        if deletable.isEmpty {
+            a.messageText = patches.count == 1 ? "“\(patches[0].name)” is in use" : "These patches are in use"
+            a.informativeText = "Remove them from every setlist before deleting."
+            a.addButton(withTitle: "OK")
+            a.runModal(); return
+        }
+        a.messageText = deletable.count == 1 ? "Delete “\(deletable[0].name)”?" : "Delete \(deletable.count) patches?"
+        a.informativeText = (kept > 0 ? "\(kept) selected patch\(kept == 1 ? " is" : "es are") used in a setlist and will be kept. " : "") + "This cannot be undone."
+        a.addButton(withTitle: "Cancel")
+        let b = a.addButton(withTitle: deletable.count == 1 ? "Delete Patch" : "Delete Patches")
+        b.hasDestructiveAction = true
+        guard a.runModal() == .alertSecondButtonReturn else { return }
+        for p in deletable { store.deletePatch(p.id) }
+        multiSelection = multiSelection.subtracting(deletable.map(\.id))
     }
 
     private var subtitle: String {
@@ -136,7 +171,6 @@ struct PatchRow: View {
                 .font(.caption).foregroundStyle(.secondary).frame(width: 70, alignment: .trailing)
             HStack(spacing: 2) {
                 Button { state.infoPatchID = patch.id } label: { Image(systemName: "info.circle") }.help("Show all properties")
-                Button { select(); state.renaming = .patchRow(patch.id) } label: { Image(systemName: "pencil") }.help("Rename")
                 TagButton(title: "Tags for “\(patch.name)”", tags: patch.meta.tags) { store.setTags($0, forPatch: patch.id) }
             }
             .buttonStyle(.borderless)
