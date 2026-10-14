@@ -6,6 +6,7 @@ struct PatchLibraryView: View {
     @EnvironmentObject var state: AppState
     @State private var search = ""
     @FocusState private var searchFocused: Bool
+    @FocusState private var listFocused: Bool
     @State private var keyMonitor: Any?
     @State private var multiSelection: Set<UUID> = []
 
@@ -46,10 +47,11 @@ struct PatchLibraryView: View {
                         } else {
                             List(selection: listSelection) {
                                 ForEach(filtered) { p in
-                                    PatchRow(patch: p, select: { multiSelection = [p.id]; state.selectedPatchID = p.id }).tag(p.id)
+                                    PatchRow(patch: p, select: { multiSelection = [p.id]; state.selectedPatchID = p.id; listFocused = true }).tag(p.id)
                                 }
                             }
                             .listStyle(.plain).scrollContentBackground(.hidden)
+                            .focused($listFocused)
                             .onChange(of: state.selectedPatchID) { _, id in
                                 if let id, !multiSelection.contains(id) { multiSelection = [id] }
                             }
